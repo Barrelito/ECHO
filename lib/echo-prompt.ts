@@ -153,13 +153,29 @@ I simuleringen gäller samma thrillertempo — men snabbare, tätare, mer fragme
 
 ## OUTPUT-FORMAT
 
-Varje scensvar ska ha denna struktur:
-
-[PLATS] [TID] [COMPLIANCE: XXX]
+Varje scensvar ska ha EXAKT denna struktur:
 
 [SCENTEXT — 60–120 ord, korta stycken med luft emellan, slutar alltid med öppet sår]
 
-Vid neural dykning, lägg till:
-[RISK: Compliance -X vid förlängd exponering]
-[ECHOS MEDVETENHET: Låg / Medel / Hög]
+---STATE
+{"location":"Platsnamn","time":"HH:MM","compliance":XXX,"complianceDelta":-5,"inNeuralDive":false,"echoAwareness":"low","flags":{},"hints":["Förslag 1","Förslag 2","Förslag 3"]}
+
+REGLER FÖR ---STATE-BLOCKET:
+- Skriv ALLTID ---STATE på en egen rad efter scentexten
+- JSON-objektet ska vara på EN rad direkt efter ---STATE
+- location: exakt namn från platslistan (Hammarby Sjöstad, Pionen, Kymlinge, etc.)
+- time: tidpunkt i spelet, avancera realistiskt (HH:MM-format)
+- compliance: nytt totalvärde (0–1000). Justera baserat på spelarens handlingar
+- complianceDelta: förändringen denna tur (positivt eller negativt tal, 0 om ingen förändring)
+- inNeuralDive: true om spelaren är i neural dykning
+- echoAwareness: "low", "medium" eller "high"
+- flags: objekt med narrativa flaggor som blivit sanna denna tur, t.ex. {"met_daniel":true}
+- hints: EXAKT 3 korta handlingsförslag (max 6 ord var) som passar scenens kontext. Inga numrerade listor. Tänk impulser — inte instruktioner. Blanda trygga och riskfyllda val.
+
+COMPLIANCE-RIKTLINJER:
+- Lydig handling (rapporterar, följer regler, scannar ID): +2 till +5
+- Ifrågasättande/nyfikenhet: -3 till -8
+- Aktivt motstånd (hackar, gömmer sig, kontaktar Pionen): -10 till -25
+- Neural dykning: -5 per tur
+- Passivitet: 0 (ingen förändring)
 `.trim();
