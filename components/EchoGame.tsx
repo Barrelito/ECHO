@@ -91,6 +91,54 @@ function SceneText({ text, streaming, dimmed }: { text: string; streaming: boole
   );
 }
 
+function RevealingScene({ paragraphs, revealedCount, onAdvance, allRevealed }: {
+  paragraphs: string[];
+  revealedCount: number;
+  onAdvance: () => void;
+  allRevealed: boolean;
+}) {
+  return (
+    <div
+      onClick={allRevealed ? undefined : onAdvance}
+      style={{ cursor: allRevealed ? "default" : "pointer", userSelect: allRevealed ? "auto" : "none" }}
+    >
+      <div style={{ fontFamily: "Georgia, 'Times New Roman', serif", fontSize: "17px", lineHeight: "1.9", marginBottom: "0.5rem" }}>
+        {paragraphs.slice(0, revealedCount).map((p, i) => {
+          const isLatest = i === revealedCount - 1;
+          const isPast = i < revealedCount - 1;
+          return (
+            <p key={i} style={{
+              margin: "0 0 1.1em 0",
+              color: isPast ? "var(--color-text-secondary)" : "var(--color-text-primary)",
+              animation: isLatest ? "sceneFadeIn 0.5s ease-out both" : "none",
+              transition: "color 0.4s ease",
+            }}>
+              {p}
+            </p>
+          );
+        })}
+      </div>
+      {!allRevealed && (
+        <div style={{ textAlign: "center", padding: "0.25rem 0" }}>
+          <span style={{
+            display: "inline-block",
+            fontSize: "14px",
+            color: "var(--color-text-tertiary)",
+            animation: "advancePulse 2s ease-in-out infinite",
+            opacity: 0.5,
+          }}>
+            ▾
+          </span>
+        </div>
+      )}
+      <style>{`
+        @keyframes sceneFadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes advancePulse { 0%, 100% { opacity: 0.3; transform: translateY(0); } 50% { opacity: 0.7; transform: translateY(3px); } }
+      `}</style>
+    </div>
+  );
+}
+
 function ActionHints({ hints, onSelect }: { hints: string[]; onSelect: (hint: string) => void }) {
   if (hints.length === 0) return null;
   return (
@@ -269,6 +317,10 @@ export default function EchoGame({ initialSave, onSave, onMenu, onStateChange }:
   const [hints, setHints] = useState<string[]>([]);
   const [journalOpen, setJournalOpen] = useState(false);
   const [mapOpen, setMapOpen] = useState(false);
+  const [revealParagraphs, setRevealParagraphs] = useState<string[]>([]);
+  const [revealedCount, setRevealedCount] = useState(0);
+  const isRevealing = revealParagraphs.length > 0 && revealedCount < revealParagraphs.length;
+  const allRevealed = revealParagraphs.length > 0 && revealedCount >= revealParagraphs.length;
   const bottomRef = useRef<HTMLDivElement>(null);
   const loadingMessage = useEchoLoadingMessage(isThinking);
 
@@ -286,6 +338,23 @@ export default function EchoGame({ initialSave, onSave, onMenu, onStateChange }:
   stateRef.current = state;
   sceneRef.current = scene;
   ambientPausedRef.current = ambientPaused;
+
+  const advanceReveal = useCallback(() => {
+    setRevealedCount((c) => Math.min(c + 1, revealParagraphs.length));
+  }, [revealParagraphs.length]);
+
+  // Keyboard: space/enter/ArrowDown to advance reveal
+  useEffect(() => {
+    if (!isRevealing) return;
+    function handleKey(e: KeyboardEvent) {
+      if (e.key === " " || e.key === "Enter" || e.key === "ArrowDown") {
+        e.preventDefault();
+        advanceReveal();
+      }
+    }
+    window.addEventListener("keydown", handleKey);
+    return () => window.removeEventListener("keydown", handleKey);
+  }, [isRevealing, advanceReveal]);
 
   const scrollRafRef = useRef<number | null>(null);
   const smoothScrollTo = useCallback((target: number) => {
@@ -312,7 +381,7 @@ export default function EchoGame({ initialSave, onSave, onMenu, onStateChange }:
     if (!bottomRef.current) return;
     const targetY = bottomRef.current.getBoundingClientRect().top + window.scrollY - window.innerHeight + 80;
     if (targetY > window.scrollY) smoothScrollTo(targetY);
-  }, [streamingText, isThinking, ambientFragments, smoothScrollTo]);
+  }, [streamingText, isThinking, ambientFragments, revealedCount, smoothScrollTo]);
 
   // Page Visibility API
   useEffect(() => {
@@ -405,14 +474,27 @@ export default function EchoGame({ initialSave, onSave, onMenu, onStateChange }:
     }
   }
 
+  function enterRevealMode(text: string) {
+    const cleaned = cleanSceneText(text);
+    const paras = cleaned.split("\n").filter((l) => l.trim());
+    if (paras.length === 0) return;
+    setRevealParagraphs(paras);
+    setRevealedCount(1); // Show first paragraph immediately
+  }
+
   async function startGame() {
     setIsThinking(true); setIsStreaming(true); setStreamingText(""); setStarted(true);
-    setHudExpanded(false); setHints([]);
+    setHudExpanded(false); setHints([]); setRevealParagraphs([]); setRevealedCount(0);
     stopAmbient();
     let accumulated = "";
     try {
       const res = await fetch("/api/game");
-      await readStream(res, (text) => { accumulated += text; setStreamingText(accumulated); }, (newState, newMeta) => { setScene(accumulated); setStreamingText(""); setState(newState); setMeta(newMeta); setHints(newMeta.hints ?? []); setHasUnsavedChanges(true); onStateChange?.(newState, [], accumulated); });
+      await readStream(res, (text) => { accumulated += text; }, (newState, newMeta) => {
+        setScene(accumulated); setStreamingText(""); setState(newState); setMeta(newMeta);
+        setHints(newMeta.hints ?? []); setHasUnsavedChanges(true);
+        onStateChange?.(newState, [], accumulated);
+        enterRevealMode(accumulated);
+      });
     } catch { setScene("Systemfel. ECHO svarar inte."); }
     finally { setIsThinking(false); setIsStreaming(false); setHudExpanded(true); startAmbient(); }
   }
@@ -420,6 +502,7 @@ export default function EchoGame({ initialSave, onSave, onMenu, onStateChange }:
   async function sendInput(overrideText?: string) {
     const playerText = (overrideText ?? input).trim();
     if (!playerText || isStreaming || !state) return;
+    if (isRevealing) return; // Don't allow input while revealing
     setInput("");
 
     // Push current scene to history
@@ -430,7 +513,7 @@ export default function EchoGame({ initialSave, onSave, onMenu, onStateChange }:
     stopAmbient();
     setAmbientDimmed(true);
     setHudExpanded(false);
-    setHints([]);
+    setHints([]); setRevealParagraphs([]); setRevealedCount(0);
 
     const recentTexts = ambientFragments.slice(-3).map((f) => f.text);
 
@@ -452,8 +535,13 @@ export default function EchoGame({ initialSave, onSave, onMenu, onStateChange }:
       let clearedFragments = false;
       await readStream(res, (text) => {
         if (!clearedFragments) { setAmbientFragments([]); setAmbientDimmed(false); clearedFragments = true; }
-        accumulated += text; setStreamingText(accumulated);
-      }, (newState, newMeta) => { setScene(accumulated); setStreamingText(""); setState(newState); setMeta(newMeta); setHints(newMeta.hints ?? []); setHistory(newHistory); setHasUnsavedChanges(true); onStateChange?.(newState, newHistory, accumulated); });
+        accumulated += text;
+      }, (newState, newMeta) => {
+        setScene(accumulated); setStreamingText(""); setState(newState); setMeta(newMeta);
+        setHints(newMeta.hints ?? []); setHistory(newHistory); setHasUnsavedChanges(true);
+        onStateChange?.(newState, newHistory, accumulated);
+        enterRevealMode(accumulated);
+      });
     } catch { setScene("Systemfel. ECHO svarar inte."); setAmbientFragments([]); setAmbientDimmed(false); }
     finally { setIsThinking(false); setIsStreaming(false); setHudExpanded(true); startAmbient(); }
   }
@@ -472,7 +560,6 @@ export default function EchoGame({ initialSave, onSave, onMenu, onStateChange }:
     );
   }
 
-  const displayText = streamingText || scene;
   const visibleFragments = ambientFragments.slice(-3);
 
   return (
@@ -563,13 +650,18 @@ export default function EchoGame({ initialSave, onSave, onMenu, onStateChange }:
           </div>
         )}
 
-        {displayText && (
+        {revealParagraphs.length > 0 && (
           <div style={{ background: "var(--color-background-primary)", border: "0.5px solid var(--color-border-tertiary)", borderRadius: "12px", padding: "2rem 2.25rem", marginBottom: "1.5rem" }}>
-            <SceneText text={displayText} streaming={isStreaming} />
+            <RevealingScene
+              paragraphs={revealParagraphs}
+              revealedCount={revealedCount}
+              onAdvance={advanceReveal}
+              allRevealed={allRevealed}
+            />
           </div>
         )}
 
-        {!isStreaming && hints.length > 0 && (
+        {allRevealed && !isStreaming && hints.length > 0 && (
           <ActionHints hints={hints} onSelect={(hint) => sendInput(hint)} />
         )}
 
@@ -593,15 +685,15 @@ export default function EchoGame({ initialSave, onSave, onMenu, onStateChange }:
           </div>
         )}
 
-        <div style={{ display: "flex", gap: "8px" }}>
+        <div style={{ display: "flex", gap: "8px", opacity: isRevealing ? 0 : (isStreaming ? 0.5 : 1), transition: "opacity 0.4s", pointerEvents: isRevealing || isStreaming ? "none" : "auto" }}>
           <input value={input}
             onChange={(e) => { setInput(e.target.value); if (e.target.value) setAmbientPaused(true); else setAmbientPaused(false); }}
             onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendInput(); } }}
             placeholder={isStreaming ? "ECHO skriver..." : "Vad gör du?"}
-            disabled={isStreaming}
-            style={{ flex: 1, padding: "12px 16px", fontSize: "14px", border: "0.5px solid var(--color-border-secondary)", borderRadius: "8px", background: "var(--color-background-primary)", color: "var(--color-text-primary)", outline: "none", opacity: isStreaming ? 0.5 : 1, transition: "opacity 0.3s" }} />
-          <button onClick={() => sendInput()} disabled={isStreaming || !input.trim()}
-            style={{ padding: "12px 20px", fontSize: "14px", border: "0.5px solid var(--color-border-secondary)", borderRadius: "8px", background: "transparent", color: "var(--color-text-primary)", cursor: isStreaming || !input.trim() ? "not-allowed" : "pointer", opacity: isStreaming || !input.trim() ? 0.4 : 1, transition: "opacity 0.3s" }}>
+            disabled={isStreaming || isRevealing}
+            style={{ flex: 1, padding: "12px 16px", fontSize: "14px", border: "0.5px solid var(--color-border-secondary)", borderRadius: "8px", background: "var(--color-background-primary)", color: "var(--color-text-primary)", outline: "none" }} />
+          <button onClick={() => sendInput()} disabled={isStreaming || isRevealing || !input.trim()}
+            style={{ padding: "12px 20px", fontSize: "14px", border: "0.5px solid var(--color-border-secondary)", borderRadius: "8px", background: "transparent", color: "var(--color-text-primary)", cursor: isStreaming || isRevealing || !input.trim() ? "not-allowed" : "pointer", opacity: isStreaming || isRevealing || !input.trim() ? 0.4 : 1, transition: "opacity 0.3s" }}>
             →
           </button>
         </div>
