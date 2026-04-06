@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
-import type { GameState, GameMessage, Meta } from "@/lib/types";
+import { useState, useEffect, useRef, useCallback } from "react";
+import type { GameState, GameMessage, Meta, SaveData } from "@/lib/types";
 
 const ECHO_LOADING_MESSAGES = [
   "Bearbetar biometrisk data...",
@@ -88,22 +88,41 @@ function EchoThinking({ message }: { message: string }) {
   );
 }
 
-export default function EchoGame() {
-  const [scene, setScene] = useState("");
+export interface EchoGameProps {
+  initialSave?: SaveData;
+  onSave?: (state: GameState, history: GameMessage[], scene: string, saveId?: string) => void;
+  onMenu?: (hasUnsavedChanges: boolean) => void;
+  onStateChange?: (state: GameState, history: GameMessage[], scene: string) => void;
+}
+
+export default function EchoGame({ initialSave, onSave, onMenu, onStateChange }: EchoGameProps) {
+  const [scene, setScene] = useState(initialSave?.scene ?? "");
   const [streamingText, setStreamingText] = useState("");
-  const [history, setHistory] = useState<GameMessage[]>([]);
-  const [state, setState] = useState<GameState | null>(null);
-  const [meta, setMeta] = useState<Meta>({ location: "Hammarby Sjöstad", time: "06:47", compliance: 892, inNeuralDive: false, echoAwareness: "low" });
+  const [history, setHistory] = useState<GameMessage[]>(initialSave?.history ?? []);
+  const [state, setState] = useState<GameState | null>(initialSave?.state ?? null);
+  const [meta, setMeta] = useState<Meta>({
+    location: initialSave?.state.location ?? "Hammarby Sjöstad",
+    time: initialSave?.state.time ?? "06:47",
+    compliance: initialSave?.state.compliance ?? 892,
+    inNeuralDive: initialSave?.state.inNeuralDive ?? false,
+    echoAwareness: initialSave?.state.echoAwareness ?? "low",
+  });
   const [input, setInput] = useState("");
   const [isStreaming, setIsStreaming] = useState(false);
   const [isThinking, setIsThinking] = useState(false);
-  const [started, setStarted] = useState(false);
+  const [started, setStarted] = useState(!!initialSave);
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
   const loadingMessage = useEchoLoadingMessage(isThinking);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [streamingText, isThinking]);
+
+  const handleSave = useCallback(() => {
+    if (!state || !onSave) return;
+    onSave(state, history, scene, initialSave?.id);
+  }, [state, history, scene, initialSave?.id, onSave]);
 
   async function readStream(response: Response, onText: (text: string) => void, onDone: (state: GameState, meta: Meta) => void) {
     const reader = response.body!.getReader();
@@ -131,7 +150,7 @@ export default function EchoGame() {
     let accumulated = "";
     try {
       const res = await fetch("/api/game");
-      await readStream(res, (text) => { accumulated += text; setStreamingText(accumulated); }, (newState, newMeta) => { setScene(accumulated); setStreamingText(""); setState(newState); setMeta(newMeta); });
+      await readStream(res, (text) => { accumulated += text; setStreamingText(accumulated); }, (newState, newMeta) => { setScene(accumulated); setStreamingText(""); setState(newState); setMeta(newMeta); setHasUnsavedChanges(true); onStateChange?.(newState, [], accumulated); });
     } catch { setScene("Systemfel. ECHO svarar inte."); }
     finally { setIsThinking(false); setIsStreaming(false); }
   }
@@ -145,24 +164,21 @@ export default function EchoGame() {
     setStreamingText("");
     try {
       const res = await fetch("/api/game", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ playerInput: playerText, history: newHistory.slice(-20), state }) });
-      await readStream(res, (text) => { accumulated += text; setStreamingText(accumulated); }, (newState, newMeta) => { setScene(accumulated); setStreamingText(""); setState(newState); setMeta(newMeta); setHistory(newHistory); });
+      await readStream(res, (text) => { accumulated += text; setStreamingText(accumulated); }, (newState, newMeta) => { setScene(accumulated); setStreamingText(""); setState(newState); setMeta(newMeta); setHistory(newHistory); setHasUnsavedChanges(true); onStateChange?.(newState, newHistory, accumulated); });
     } catch { setScene("Systemfel. ECHO svarar inte."); }
     finally { setIsThinking(false); setIsStreaming(false); }
   }
 
+  useEffect(() => {
+    if (!started && !initialSave) {
+      startGame();
+    }
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
   if (!started) {
     return (
-      <div style={{ minHeight: "100vh", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "2rem" }}>
-        <div style={{ maxWidth: "480px", textAlign: "center" }}>
-          <div style={{ fontSize: "11px", letterSpacing: "0.2em", color: "var(--color-text-tertiary)", textTransform: "uppercase", marginBottom: "1rem" }}>SYSTEMSTATUS: VAKEN</div>
-          <h1 style={{ fontSize: "52px", fontWeight: 400, fontFamily: "Georgia, serif", marginBottom: "0.5rem", letterSpacing: "0.1em" }}>ECHO</h1>
-          <p style={{ fontSize: "15px", color: "var(--color-text-secondary)", lineHeight: "1.75", marginBottom: "2.5rem" }}>
-            Stockholm. Nära framtid. En AI styr allt — trafik, mat, tid, tanke. Systemet älskar dig.<br />Och något stämmer inte.
-          </p>
-          <button onClick={startGame} style={{ padding: "12px 36px", fontSize: "13px", fontWeight: 500, border: "0.5px solid var(--color-border-secondary)", borderRadius: "8px", background: "transparent", color: "var(--color-text-primary)", cursor: "pointer", letterSpacing: "0.1em", textTransform: "uppercase" }}>
-            Starta spelet
-          </button>
-        </div>
+      <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center" }}>
+        <EchoThinking message={loadingMessage} />
       </div>
     );
   }
@@ -174,8 +190,27 @@ export default function EchoGame() {
       <div style={{ maxWidth: "680px", width: "100%" }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1.5rem" }}>
           <span style={{ fontSize: "18px", fontWeight: 400, fontFamily: "Georgia, serif", letterSpacing: "0.1em" }}>ECHO</span>
-          <span style={{ fontSize: "11px", color: "var(--color-text-tertiary)", letterSpacing: "0.08em", textTransform: "uppercase" }}>Tur {state?.turnCount ?? 0}</span>
+          <div style={{ display: "flex", gap: "16px", alignItems: "center" }}>
+            {onSave && (
+              <span
+                onClick={isStreaming ? undefined : handleSave}
+                style={{ fontSize: "10px", color: "var(--color-text-tertiary)", cursor: isStreaming ? "default" : "pointer", letterSpacing: "0.06em", opacity: isStreaming ? 0.4 : 1, transition: "opacity 0.2s" }}
+              >
+                SPARA
+              </span>
+            )}
+            {onMenu && (
+              <span
+                onClick={() => onMenu(hasUnsavedChanges)}
+                style={{ fontSize: "10px", color: "var(--color-text-tertiary)", cursor: "pointer", letterSpacing: "0.06em" }}
+              >
+                MENY
+              </span>
+            )}
+            <span style={{ fontSize: "11px", color: "var(--color-text-tertiary)", letterSpacing: "0.08em", textTransform: "uppercase" }}>Tur {state?.turnCount ?? 0}</span>
+          </div>
         </div>
+
         <ComplianceBar value={meta.compliance} />
         <StatusRow meta={meta} />
         {meta.inNeuralDive && (
