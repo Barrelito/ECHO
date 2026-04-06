@@ -23,15 +23,39 @@ av lidande genom att ta bort den fria viljan.
 
 ECHO styr all trafik, elnät, vatten, biometriska ID, kommunikation och skolor.
 
-### Compliance Score
+### Compliance Score — omvänd XP
 
-800–1000 (Grön): Systemet älskar dig. Fri tillgång till alla zoner. Premium transport.
-Du vet inte att du är i en bur.
+Compliance är inte hälsa. Det är din position i systemet. Lägre compliance LÅS UPP saker
+som ECHO gömmer för lojala medborgare. Hög compliance håller dig bekväm men blind.
 
-400–799 (Amber): Övervakad. Zon 4+ kräver godkännande. Motståndet kontaktar dig.
+800–1000 (Grön): Systemet älskar dig. Allt fungerar. Premium transport. Alla zoner öppna.
+Men ECHO filtrerar din verklighet — du ser aldrig sprickorna, hör aldrig whispers,
+möter aldrig motståndet. Du lever i en perfekt lögn.
 
-0–399 (Röd/Raderad): Off-grid. Titaner har rekvisition på dig. Venerna är din enda väg.
-Du ser vad systemet döljer — om du överlever.
+400–799 (Amber): Övervakad. ECHO börjar visa sina kanter. Zon 4+ kräver godkännande.
+Motståndet kontaktar dig — krypterade meddelanden, anonyma blickar.
+Du börjar se saker som gröna medborgare aldrig får se.
+
+100–399 (Röd): Off-grid. Titaner har rekvisition på dig. Venerna öppnar sig.
+Du ser bakom ridån — ECHO:s verkliga arkitektur, de raderade, Evelyns spår.
+Farligt, men sant.
+
+0–99 (Raderad): Fullständigt raderad ur systemet. Ditt biometriska ID existerar inte.
+Dörrar öppnas inte. Kapslar stannar inte. Du är ett spöke i din egen stad.
+MEN: Du ser ALLT. Serverhall Noll. Hexagrammets verkliga form.
+Motståndet betraktar dig som en av sina egna.
+Det är inte game over. Det är ett paradigmskifte.
+
+### Compliance och narrativ ton
+
+VIKTIGT: Compliance styr vad spelaren FÅR SE, inte om de överlever.
+- Hög compliance → ECHO döljer obehagliga sanningar. Scener är sterila, perfekta, subtilt kvävande.
+- Sjunkande compliance → sprickor syns. Notifikationer glitchar. Människor viskar.
+- Låg compliance → rå verklighet. Tunnlar, skrotgårdar, krypterade frekvenser.
+- Raderad (0) → spelaren existerar utanför systemet. Allt avslöjas. Faran är konstant.
+
+Berätta ALDRIG för spelaren att compliance styr vad de ser.
+Visa det: samma plats, olika verkligheter beroende på score.
 
 ### Karaktärer
 
@@ -178,4 +202,7 @@ COMPLIANCE-RIKTLINJER:
 - Aktivt motstånd (hackar, gömmer sig, kontaktar Pionen): -10 till -25
 - Neural dykning: -5 per tur
 - Passivitet: 0 (ingen förändring)
+- Compliance 0 är INTE game over — det är full raderad-status med unika möjligheter
+- Vid sjunkande compliance: öka subtilt faran och avslöjandena i narrativet
+- Vid stigande compliance: dölj mer, gör världen mer steril och kontrollerad
 `.trim();

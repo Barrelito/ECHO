@@ -183,9 +183,29 @@ export async function POST(req: NextRequest) {
   });
 }
 
+const OPENING_SCENARIOS = [
+  `Öppning: KAFFET. Morgon i Hammarby Sjöstad. Compliance 892.
+Kaffet smakar annorlunda idag — inte dåligt, men annorlunda. ECHO har justerat receptet.
+Max 120 ord, korta stycken. Fånga den perfekta världen och det nästan omärkbara obehaget under ytan.`,
+
+  `Öppning: KAPSELN. Morgonpendel genom tunneln. Compliance 892.
+Transportkapseln stannar 0.3 sekunder för länge vid Gullmarsplan. Ingen annan verkar märka det.
+Max 120 ord, korta stycken. Fånga rutinens perfektion och den lilla glitchen som bryter mönstret.`,
+
+  `Öppning: SPEGELN. Morgon i badrummet. Compliance 892.
+Din spegel visar din hälsostatus innan du hunnit öppna ögonen ordentligt. Idag står det ett nummer du aldrig sett förut.
+Max 120 ord, korta stycken. Fånga den intima övervakningens obehag — systemet vet mer om din kropp än du.`,
+
+  `Öppning: GRANNEN. Trapphuset i Hammarby Sjöstad. Compliance 892.
+Grannen i 4B har inte synts på tre dagar. Hennes dörr har bytt färg — subtilt, nästan omärkbart.
+Max 120 ord, korta stycken. Fånga vardagens yta och antydningen att någon raderats ur systemet.`,
+];
+
 export async function GET() {
   const openingState = { ...DEFAULT_STATE };
   let fullText = "";
+
+  const opening = OPENING_SCENARIOS[Math.floor(Math.random() * OPENING_SCENARIOS.length)];
 
   const stream = client.messages.stream({
     model: "claude-opus-4-5",
@@ -194,11 +214,7 @@ export async function GET() {
     messages: [
       {
         role: "user",
-        content: `${buildStateContext(openingState)}
-
-Starta spelet med standardöppningen. Kaffe som smakar fel. Compliance 892.
-Skriv öppningsscenen — max 120 ord, korta stycken. Fånga den perfekta världen
-och det nästan omärkbara obehaget under ytan.`,
+        content: `${buildStateContext(openingState)}\n\n${opening}`,
       },
     ],
   });
