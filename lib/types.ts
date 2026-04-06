@@ -18,6 +18,7 @@ export interface GameRequest {
   playerInput: string;
   history: GameMessage[];
   state: GameState;
+  recentAmbientFragments?: string[];
 }
 
 export interface Meta {
@@ -37,4 +38,15 @@ export interface SaveData {
   scene: string;
   created_at: string;
   updated_at: string;
+}
+
+export interface AmbientRequest {
+  state: GameState;
+  lastSceneSummary: string;
+}
+
+export interface AmbientEvent {
+  type: "ambient";
+  text: string;
+  actionable: boolean;
 }
