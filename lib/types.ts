@@ -27,6 +27,7 @@ export interface Meta {
   compliance: number;
   inNeuralDive: boolean;
   echoAwareness: string;
+  hints?: string[];
 }
 
 export interface SaveData {
