@@ -111,7 +111,7 @@ function parseStateUpdates(
 
 export async function POST(req: NextRequest) {
   const body: GameRequest = await req.json();
-  const { playerInput, history, state = DEFAULT_STATE } = body;
+  const { playerInput, history, state = DEFAULT_STATE, recentAmbientFragments } = body;
 
   if (!playerInput?.trim()) {
     return new Response("Ingen spelarinput", { status: 400 });
@@ -132,7 +132,9 @@ export async function POST(req: NextRequest) {
     })),
     {
       role: "user",
-      content: playerInput,
+      content: recentAmbientFragments?.length
+        ? `## RECENT AMBIENT OBSERVATIONS\nThe player has observed the following while waiting:\n${recentAmbientFragments.map((f) => `- ${f}`).join("\n")}\nThe player's input may reference these observations.\n\n${playerInput}`
+        : playerInput,
     },
   ];
 
