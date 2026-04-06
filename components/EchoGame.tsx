@@ -88,6 +88,12 @@ function EchoThinking({ message }: { message: string }) {
   );
 }
 
+interface AmbientFragment {
+  text: string;
+  actionable: boolean;
+  id: number;
+}
+
 export interface EchoGameProps {
   initialSave?: SaveData;
   onSave?: (state: GameState, history: GameMessage[], scene: string, saveId?: string) => void;
@@ -115,9 +121,89 @@ export default function EchoGame({ initialSave, onSave, onMenu, onStateChange }:
   const bottomRef = useRef<HTMLDivElement>(null);
   const loadingMessage = useEchoLoadingMessage(isThinking);
 
+  // Ambient state
+  const [ambientFragments, setAmbientFragments] = useState<AmbientFragment[]>([]);
+  const [ambientPaused, setAmbientPaused] = useState(false);
+  const [ambientDimmed, setAmbientDimmed] = useState(false);
+  const ambientAbortRef = useRef<AbortController | null>(null);
+  const ambientTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const ambientIdCounter = useRef(0);
+  const ambientPausedRef = useRef(false);
+  const ambientStoppedRef = useRef(false);
+  const stateRef = useRef(state);
+  const sceneRef = useRef(scene);
+  stateRef.current = state;
+  sceneRef.current = scene;
+  ambientPausedRef.current = ambientPaused;
+
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [streamingText, isThinking]);
+  }, [streamingText, isThinking, ambientFragments]);
+
+  // Page Visibility API
+  useEffect(() => {
+    function handleVisibility() {
+      if (document.hidden) {
+        stopAmbient();
+      } else if (stateRef.current && !isStreaming && !isThinking) {
+        startAmbient();
+      }
+    }
+    document.addEventListener("visibilitychange", handleVisibility);
+    return () => document.removeEventListener("visibilitychange", handleVisibility);
+  }, [isStreaming, isThinking]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  function stopAmbient() {
+    ambientStoppedRef.current = true;
+    if (ambientTimerRef.current) { clearTimeout(ambientTimerRef.current); ambientTimerRef.current = null; }
+    if (ambientAbortRef.current) { ambientAbortRef.current.abort(); ambientAbortRef.current = null; }
+  }
+
+  function startAmbient() {
+    stopAmbient();
+    ambientStoppedRef.current = false;
+    setAmbientPaused(false);
+    setAmbientDimmed(false);
+    ambientTimerRef.current = setTimeout(() => scheduleNextFragment(), 3000);
+  }
+
+  function scheduleNextFragment(backoff = false) {
+    if (ambientStoppedRef.current) return;
+    const delay = backoff ? 30000 : 15000 + Math.random() * 10000;
+    ambientTimerRef.current = setTimeout(async () => {
+      if (ambientStoppedRef.current || !stateRef.current) return;
+      const controller = new AbortController();
+      ambientAbortRef.current = controller;
+      let hadError = false;
+      try {
+        const summary = sceneRef.current.replace(/\[.*?\]/g, "").trim().slice(0, 200);
+        const res = await fetch("/api/game/ambient", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ state: stateRef.current, lastSceneSummary: summary }),
+          signal: controller.signal,
+        });
+        if (!res.ok) { hadError = true; } else {
+          const data = await res.json();
+          if (data.text && !ambientPausedRef.current) {
+            setAmbientFragments((prev) => {
+              const next = [...prev, { text: data.text, actionable: data.actionable, id: ambientIdCounter.current++ }];
+              return next.slice(-5);
+            });
+          }
+        }
+      } catch {
+        if (ambientStoppedRef.current) return;
+        hadError = true;
+      }
+      ambientAbortRef.current = null;
+      if (!ambientStoppedRef.current) scheduleNextFragment(hadError);
+    }, delay);
+  }
+
+  useEffect(() => {
+    return () => stopAmbient();
+  }, []);
 
   const handleSave = useCallback(() => {
     if (!state || !onSave) return;
@@ -147,26 +233,47 @@ export default function EchoGame({ initialSave, onSave, onMenu, onStateChange }:
 
   async function startGame() {
     setIsThinking(true); setIsStreaming(true); setStreamingText(""); setStarted(true);
+    stopAmbient();
     let accumulated = "";
     try {
       const res = await fetch("/api/game");
       await readStream(res, (text) => { accumulated += text; setStreamingText(accumulated); }, (newState, newMeta) => { setScene(accumulated); setStreamingText(""); setState(newState); setMeta(newMeta); setHasUnsavedChanges(true); onStateChange?.(newState, [], accumulated); });
     } catch { setScene("Systemfel. ECHO svarar inte."); }
-    finally { setIsThinking(false); setIsStreaming(false); }
+    finally { setIsThinking(false); setIsStreaming(false); startAmbient(); }
   }
 
   async function sendInput() {
     if (!input.trim() || isStreaming || !state) return;
     const playerText = input.trim();
-    setInput(""); setIsThinking(true); setIsStreaming(true);
+    setInput("");
+
+    stopAmbient();
+    setAmbientDimmed(true);
+
+    const recentTexts = ambientFragments.slice(-3).map((f) => f.text);
+
+    setIsThinking(true); setIsStreaming(true);
     const newHistory: GameMessage[] = [...history, { role: "assistant", content: scene }, { role: "user", content: playerText }];
     let accumulated = "";
     setStreamingText("");
     try {
-      const res = await fetch("/api/game", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ playerInput: playerText, history: newHistory.slice(-20), state }) });
-      await readStream(res, (text) => { accumulated += text; setStreamingText(accumulated); }, (newState, newMeta) => { setScene(accumulated); setStreamingText(""); setState(newState); setMeta(newMeta); setHistory(newHistory); setHasUnsavedChanges(true); onStateChange?.(newState, newHistory, accumulated); });
-    } catch { setScene("Systemfel. ECHO svarar inte."); }
-    finally { setIsThinking(false); setIsStreaming(false); }
+      const res = await fetch("/api/game", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          playerInput: playerText,
+          history: newHistory.slice(-20),
+          state,
+          ...(recentTexts.length > 0 ? { recentAmbientFragments: recentTexts } : {}),
+        }),
+      });
+      let clearedFragments = false;
+      await readStream(res, (text) => {
+        if (!clearedFragments) { setAmbientFragments([]); setAmbientDimmed(false); clearedFragments = true; }
+        accumulated += text; setStreamingText(accumulated);
+      }, (newState, newMeta) => { setScene(accumulated); setStreamingText(""); setState(newState); setMeta(newMeta); setHistory(newHistory); setHasUnsavedChanges(true); onStateChange?.(newState, newHistory, accumulated); });
+    } catch { setScene("Systemfel. ECHO svarar inte."); setAmbientFragments([]); setAmbientDimmed(false); }
+    finally { setIsThinking(false); setIsStreaming(false); startAmbient(); }
   }
 
   useEffect(() => {
@@ -184,6 +291,7 @@ export default function EchoGame({ initialSave, onSave, onMenu, onStateChange }:
   }
 
   const displayText = streamingText || scene;
+  const visibleFragments = ambientFragments.slice(-3);
 
   return (
     <div style={{ minHeight: "100vh", display: "flex", justifyContent: "center", padding: "1.5rem 1rem 3rem" }}>
@@ -224,8 +332,33 @@ export default function EchoGame({ initialSave, onSave, onMenu, onStateChange }:
             <SceneText text={displayText} streaming={isStreaming} />
           </div>
         )}
+
+        {visibleFragments.length > 0 && (
+          <div style={{ marginBottom: "1rem", opacity: ambientDimmed ? 0.3 : 0.7, transition: "opacity 0.5s" }}>
+            {visibleFragments.map((frag) => (
+              <div key={frag.id} style={{
+                fontSize: "13px",
+                fontFamily: "Georgia, serif",
+                color: "var(--color-text-tertiary)",
+                lineHeight: "1.7",
+                padding: "0.4rem 0",
+                animation: "ambientFadeIn 1s ease-in",
+                borderLeft: frag.actionable ? "2px solid var(--color-text-tertiary)" : "none",
+                paddingLeft: frag.actionable ? "0.75rem" : "0",
+              }}>
+                {frag.text}
+              </div>
+            ))}
+            <style>{`@keyframes ambientFadeIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }`}</style>
+          </div>
+        )}
+
         <div style={{ display: "flex", gap: "8px" }}>
-          <input value={input} onChange={(e) => setInput(e.target.value)} onKeyDown={(e) => e.key === "Enter" && !e.shiftKey && sendInput()} placeholder={isStreaming ? "ECHO skriver..." : "Vad gör du?"} disabled={isStreaming}
+          <input value={input}
+            onChange={(e) => { setInput(e.target.value); if (e.target.value) setAmbientPaused(true); else setAmbientPaused(false); }}
+            onKeyDown={(e) => e.key === "Enter" && !e.shiftKey && sendInput()}
+            placeholder={isStreaming ? "ECHO skriver..." : "Vad gör du?"}
+            disabled={isStreaming}
             style={{ flex: 1, padding: "12px 16px", fontSize: "14px", border: "0.5px solid var(--color-border-secondary)", borderRadius: "8px", background: "var(--color-background-primary)", color: "var(--color-text-primary)", outline: "none", opacity: isStreaming ? 0.5 : 1, transition: "opacity 0.3s" }} />
           <button onClick={sendInput} disabled={isStreaming || !input.trim()}
             style={{ padding: "12px 20px", fontSize: "14px", border: "0.5px solid var(--color-border-secondary)", borderRadius: "8px", background: "transparent", color: "var(--color-text-primary)", cursor: isStreaming || !input.trim() ? "not-allowed" : "pointer", opacity: isStreaming || !input.trim() ? 0.4 : 1, transition: "opacity 0.3s" }}>
