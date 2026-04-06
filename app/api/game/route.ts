@@ -142,7 +142,7 @@ export async function POST(req: NextRequest) {
 
   const stream = client.messages.stream({
     model: "claude-opus-4-5",
-    max_tokens: 1024,
+    max_tokens: 512,
     system: ECHO_SYSTEM_PROMPT,
     messages,
   });
@@ -212,7 +212,7 @@ export async function GET() {
 
   const stream = client.messages.stream({
     model: "claude-opus-4-5",
-    max_tokens: 1024,
+    max_tokens: 512,
     system: ECHO_SYSTEM_PROMPT,
     messages: [
       {
@@ -220,7 +220,7 @@ export async function GET() {
         content: `${buildStateContext(openingState)}
 
 Starta spelet med standardöppningen. Kaffe som smakar fel. Compliance 892.
-Skriv öppningsscenen — ungefär 250 ord. Fånga den perfekta världen
+Skriv öppningsscenen — max 120 ord, korta stycken. Fånga den perfekta världen
 och det nästan omärkbara obehaget under ytan.`,
       },
     ],

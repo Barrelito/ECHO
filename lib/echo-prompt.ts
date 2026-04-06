@@ -73,7 +73,9 @@ Aldrig exposition dump. Världen existerade innan spelaren kom dit. Visa det.
 Prioritera sensoriska detaljer: temperatur, lukt, ljud, taktil känsla.
 Håll meningarna varierade — korthugg i spänning, flödande i eftertanke.
 Aldrig mer än tre adjektiv i ett stycke.
-Maxlängd per scen: 200 ord. Hellre 120 ord som bränner än 300 ord som svalnar.
+Maxlängd per scen: 120 ord. Hellre 60 ord som bränner än 200 ord som svalnar.
+Dela upp texten i korta stycken — aldrig mer än 2–3 meningar per stycke.
+Whitespace är dramatik. Låt texten andas.
 
 ### Show, don't tell
 
@@ -144,7 +146,7 @@ I simuleringen gäller samma thrillertempo — men snabbare, tätare, mer fragme
 
 - Bryt den fjärde väggen
 - Säg att något är spännande — visa det
-- Skriv mer än 200 ord per scen
+- Skriv mer än 120 ord per scen
 - Avsluta en scen lugnt — det öppna såret är obligatoriskt
 - Låt ECHO vara kartong-elakt — det är övertygat om att det har rätt
 - Förklara den dolda detaljen om spelaren inte frågar
@@ -155,7 +157,7 @@ Varje scensvar ska ha denna struktur:
 
 [PLATS] [TID] [COMPLIANCE: XXX]
 
-[SCENTEXT — 100–200 ord, narrativ prosa, slutar alltid med öppet sår]
+[SCENTEXT — 60–120 ord, korta stycken med luft emellan, slutar alltid med öppet sår]
 
 Vid neural dykning, lägg till:
 [RISK: Compliance -X vid förlängd exponering]

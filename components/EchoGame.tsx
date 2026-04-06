@@ -62,12 +62,23 @@ function StatusRow({ meta }: { meta: Meta }) {
 }
 
 function SceneText({ text, streaming }: { text: string; streaming: boolean }) {
-  const cleaned = text.replace(/\[.*?\]/g, "").trim().split("\n").filter((l) => l.trim()).join("\n\n");
+  const paragraphs = text.replace(/\[.*?\]/g, "").trim().split("\n").filter((l) => l.trim());
   return (
-    <div style={{ fontFamily: "Georgia, 'Times New Roman', serif", fontSize: "16px", lineHeight: "1.85", color: "var(--color-text-primary)", whiteSpace: "pre-wrap", marginBottom: "0.5rem" }}>
-      {cleaned}
+    <div style={{ fontFamily: "Georgia, 'Times New Roman', serif", fontSize: "17px", lineHeight: "1.9", color: "var(--color-text-primary)", marginBottom: "0.5rem" }}>
+      {paragraphs.map((p, i) => (
+        <p key={i} style={{
+          margin: "0 0 1.1em 0",
+          animation: streaming ? "none" : `sceneFadeIn 0.6s ease-out ${i * 0.15}s both`,
+          opacity: streaming ? 1 : undefined,
+        }}>
+          {p}
+        </p>
+      ))}
       {streaming && <span style={{ display: "inline-block", width: "2px", height: "1.1em", background: "var(--color-text-tertiary)", marginLeft: "2px", verticalAlign: "text-bottom", animation: "blink 1s step-end infinite" }} />}
-      <style>{`@keyframes blink { 0%,100%{opacity:1} 50%{opacity:0} }`}</style>
+      <style>{`
+        @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0} }
+        @keyframes sceneFadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+      `}</style>
     </div>
   );
 }
@@ -118,6 +129,7 @@ export default function EchoGame({ initialSave, onSave, onMenu, onStateChange }:
   const [isThinking, setIsThinking] = useState(false);
   const [started, setStarted] = useState(!!initialSave);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+  const [hudExpanded, setHudExpanded] = useState(true);
   const bottomRef = useRef<HTMLDivElement>(null);
   const loadingMessage = useEchoLoadingMessage(isThinking);
 
@@ -233,13 +245,14 @@ export default function EchoGame({ initialSave, onSave, onMenu, onStateChange }:
 
   async function startGame() {
     setIsThinking(true); setIsStreaming(true); setStreamingText(""); setStarted(true);
+    setHudExpanded(false);
     stopAmbient();
     let accumulated = "";
     try {
       const res = await fetch("/api/game");
       await readStream(res, (text) => { accumulated += text; setStreamingText(accumulated); }, (newState, newMeta) => { setScene(accumulated); setStreamingText(""); setState(newState); setMeta(newMeta); setHasUnsavedChanges(true); onStateChange?.(newState, [], accumulated); });
     } catch { setScene("Systemfel. ECHO svarar inte."); }
-    finally { setIsThinking(false); setIsStreaming(false); startAmbient(); }
+    finally { setIsThinking(false); setIsStreaming(false); setHudExpanded(true); startAmbient(); }
   }
 
   async function sendInput() {
@@ -249,6 +262,7 @@ export default function EchoGame({ initialSave, onSave, onMenu, onStateChange }:
 
     stopAmbient();
     setAmbientDimmed(true);
+    setHudExpanded(false);
 
     const recentTexts = ambientFragments.slice(-3).map((f) => f.text);
 
@@ -273,7 +287,7 @@ export default function EchoGame({ initialSave, onSave, onMenu, onStateChange }:
         accumulated += text; setStreamingText(accumulated);
       }, (newState, newMeta) => { setScene(accumulated); setStreamingText(""); setState(newState); setMeta(newMeta); setHistory(newHistory); setHasUnsavedChanges(true); onStateChange?.(newState, newHistory, accumulated); });
     } catch { setScene("Systemfel. ECHO svarar inte."); setAmbientFragments([]); setAmbientDimmed(false); }
-    finally { setIsThinking(false); setIsStreaming(false); startAmbient(); }
+    finally { setIsThinking(false); setIsStreaming(false); setHudExpanded(true); startAmbient(); }
   }
 
   useEffect(() => {
@@ -319,16 +333,32 @@ export default function EchoGame({ initialSave, onSave, onMenu, onStateChange }:
           </div>
         </div>
 
-        <ComplianceBar value={meta.compliance} />
-        <StatusRow meta={meta} />
-        {meta.inNeuralDive && (
-          <div style={{ background: "#EEEDFE", border: "0.5px solid #AFA9EC", borderRadius: "8px", padding: "0.6rem 1rem", fontSize: "12px", color: "#3C3489", marginBottom: "1rem", letterSpacing: "0.04em" }}>
-            ⬡ NEURAL DYKNING AKTIV — compliance sjunker vid förlängd exponering
+        <div
+          onClick={() => setHudExpanded((v) => !v)}
+          style={{ cursor: "pointer", overflow: "hidden", maxHeight: hudExpanded ? "200px" : "0px", opacity: hudExpanded ? 1 : 0, transition: "max-height 0.5s ease, opacity 0.4s ease", marginBottom: hudExpanded ? "0" : "0" }}
+        >
+          <ComplianceBar value={meta.compliance} />
+          <StatusRow meta={meta} />
+          {meta.inNeuralDive && (
+            <div style={{ background: "#EEEDFE", border: "0.5px solid #AFA9EC", borderRadius: "8px", padding: "0.6rem 1rem", fontSize: "12px", color: "#3C3489", marginBottom: "1rem", letterSpacing: "0.04em" }}>
+              ⬡ NEURAL DYKNING AKTIV — compliance sjunker vid förlängd exponering
+            </div>
+          )}
+        </div>
+        {!hudExpanded && (
+          <div
+            onClick={() => setHudExpanded(true)}
+            style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "0.4rem 0", marginBottom: "0.75rem", cursor: "pointer", fontSize: "11px", color: "var(--color-text-tertiary)", letterSpacing: "0.06em", opacity: 0.6, transition: "opacity 0.2s" }}
+            onMouseEnter={(e) => (e.currentTarget.style.opacity = "1")}
+            onMouseLeave={(e) => (e.currentTarget.style.opacity = "0.6")}
+          >
+            <span>{meta.location} · {meta.time}</span>
+            <span style={{ color: meta.compliance >= 800 ? "#639922" : meta.compliance >= 400 ? "#BA7517" : "#E24B4A" }}>{meta.compliance}</span>
           </div>
         )}
         {isThinking && <EchoThinking message={loadingMessage} />}
         {displayText && (
-          <div style={{ background: "var(--color-background-primary)", border: "0.5px solid var(--color-border-tertiary)", borderRadius: "12px", padding: "1.75rem", marginBottom: "1.25rem" }}>
+          <div style={{ background: "var(--color-background-primary)", border: "0.5px solid var(--color-border-tertiary)", borderRadius: "12px", padding: "2rem 2.25rem", marginBottom: "1.5rem" }}>
             <SceneText text={displayText} streaming={isStreaming} />
           </div>
         )}
