@@ -287,9 +287,32 @@ export default function EchoGame({ initialSave, onSave, onMenu, onStateChange }:
   sceneRef.current = scene;
   ambientPausedRef.current = ambientPaused;
 
+  const scrollRafRef = useRef<number | null>(null);
+  const smoothScrollTo = useCallback((target: number) => {
+    if (scrollRafRef.current) cancelAnimationFrame(scrollRafRef.current);
+    const start = window.scrollY;
+    const distance = target - start;
+    if (Math.abs(distance) < 2) return;
+    const duration = Math.min(800, Math.max(300, Math.abs(distance) * 1.5));
+    const startTime = performance.now();
+    function step(now: number) {
+      const elapsed = now - startTime;
+      const progress = Math.min(elapsed / duration, 1);
+      const ease = progress < 0.5
+        ? 2 * progress * progress
+        : 1 - Math.pow(-2 * progress + 2, 2) / 2;
+      window.scrollTo(0, start + distance * ease);
+      if (progress < 1) scrollRafRef.current = requestAnimationFrame(step);
+      else scrollRafRef.current = null;
+    }
+    scrollRafRef.current = requestAnimationFrame(step);
+  }, []);
+
   useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [streamingText, isThinking, ambientFragments]);
+    if (!bottomRef.current) return;
+    const targetY = bottomRef.current.getBoundingClientRect().top + window.scrollY - window.innerHeight + 80;
+    if (targetY > window.scrollY) smoothScrollTo(targetY);
+  }, [streamingText, isThinking, ambientFragments, smoothScrollTo]);
 
   // Page Visibility API
   useEffect(() => {
