@@ -137,6 +137,103 @@ function EchoThinking({ message }: { message: string }) {
   );
 }
 
+const FLAG_LABELS: Record<string, string> = {
+  found_hexagram_mention: "Hexagrammet — en empatikod, gömd i systemets djup",
+  heard_evelyns_voice: "Evelyns röst — fragment av ett medvetande som inte borde existera",
+  met_daniel: "Daniel Voss — kopparmyntet, skulden, off-grid i Aspudden",
+  knows_about_kymlinge: "Kymlinge — spökstationen. Silverpilen. Betong utan färg.",
+  found_ghost_hand: "Spökhanden — biometrisk mask. ECHO ser dig inte.",
+  contacted_resistance: "Motståndet — krypterade whispers i stadens brus",
+  entered_server_zero: "Serverhall Noll — arton grader. Mörkret andas.",
+  met_gabriel: "Gabriel Kane — karismatisk, övertygad. Tror att han styr ECHO.",
+  met_marcus: "Marcus Raine — raderad Titan. Få ord. Stor tystnad.",
+  met_sofia: "Sofia — pragmatisk, stridshärdad. Värmen är begravd djupt.",
+};
+
+function Journal({ flags, open, onToggle }: { flags: Record<string, boolean>; open: boolean; onToggle: () => void }) {
+  const discovered = Object.entries(flags).filter(([, v]) => v);
+  return (
+    <div style={{ marginBottom: "1rem" }}>
+      <div
+        onClick={onToggle}
+        style={{ display: "flex", justifyContent: "space-between", alignItems: "center", cursor: "pointer", padding: "0.4rem 0", fontSize: "11px", color: "var(--color-text-tertiary)", letterSpacing: "0.06em", textTransform: "uppercase" }}
+      >
+        <span>Upptäckter {discovered.length > 0 ? `(${discovered.length})` : ""}</span>
+        <span style={{ transition: "transform 0.3s", transform: open ? "rotate(180deg)" : "rotate(0)" }}>&#9662;</span>
+      </div>
+      <div style={{ overflow: "hidden", maxHeight: open ? "500px" : "0px", opacity: open ? 1 : 0, transition: "max-height 0.4s ease, opacity 0.3s ease" }}>
+        {discovered.length === 0 ? (
+          <div style={{ fontSize: "13px", fontFamily: "Georgia, serif", color: "var(--color-text-tertiary)", fontStyle: "italic", padding: "0.5rem 0" }}>
+            Inga upptäckter ännu. Utforska världen.
+          </div>
+        ) : (
+          <div style={{ padding: "0.5rem 0" }}>
+            {discovered.map(([key]) => (
+              <div key={key} style={{
+                fontSize: "13px",
+                fontFamily: "Georgia, serif",
+                color: "var(--color-text-secondary)",
+                padding: "0.35rem 0 0.35rem 0.75rem",
+                borderLeft: "2px solid var(--color-border-tertiary)",
+                marginBottom: "0.4rem",
+                animation: "sceneFadeIn 0.4s ease-out both",
+              }}>
+                {FLAG_LABELS[key] || key.replace(/_/g, " ")}
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+const LOCATION_COORDS: Record<string, { x: number; y: number }> = {
+  "Hammarby Sjöstad": { x: 62, y: 68 },
+  "The Apex": { x: 50, y: 18 },
+  "Kista Skrotgård": { x: 38, y: 22 },
+  "Pionen": { x: 48, y: 58 },
+  "Kymlinge": { x: 42, y: 30 },
+  "Venerna": { x: 55, y: 50 },
+  "Serverhall Noll": { x: 52, y: 42 },
+};
+
+function MiniMap({ currentLocation, compliance }: { currentLocation: string; compliance: number }) {
+  const current = LOCATION_COORDS[currentLocation];
+  return (
+    <svg viewBox="0 0 100 90" style={{ width: "100%", maxWidth: "280px", margin: "0 auto", display: "block" }}>
+      {/* Water */}
+      <path d="M60,45 Q75,50 80,65 Q82,75 70,80 Q60,85 55,75 Q50,65 60,45" fill="var(--color-background-tertiary)" opacity="0.4" />
+      <path d="M30,60 Q35,55 40,60 Q45,65 35,70 Q25,68 30,60" fill="var(--color-background-tertiary)" opacity="0.3" />
+
+      {/* Location dots + labels */}
+      {Object.entries(LOCATION_COORDS).map(([name, pos]) => {
+        const isCurrent = name === currentLocation;
+        const isAccessible = compliance < 400 || name === "Hammarby Sjöstad" || name === "The Apex" ||
+          (compliance < 800 && (name === "Pionen" || name === "Kista Skrotgård"));
+        const dotColor = isCurrent ? "var(--color-text-primary)" : isAccessible ? "var(--color-text-tertiary)" : "var(--color-background-tertiary)";
+
+        return (
+          <g key={name}>
+            <circle cx={pos.x} cy={pos.y} r={isCurrent ? 2.5 : 1.5} fill={dotColor}>
+              {isCurrent && <animate attributeName="r" values="2.5;3.5;2.5" dur="2s" repeatCount="indefinite" />}
+              {isCurrent && <animate attributeName="opacity" values="1;0.6;1" dur="2s" repeatCount="indefinite" />}
+            </circle>
+            <text x={pos.x} y={pos.y - 4} textAnchor="middle" fontSize="3.2" fill={isCurrent ? "var(--color-text-primary)" : "var(--color-text-tertiary)"} fontFamily="system-ui, sans-serif" opacity={isCurrent ? 1 : 0.6}>
+              {name === "Hammarby Sjöstad" ? "Hammarby" : name === "Kista Skrotgård" ? "Skrotgården" : name === "Serverhall Noll" ? "Serverhallen" : name}
+            </text>
+          </g>
+        );
+      })}
+
+      {/* Connection lines */}
+      {current && Object.entries(LOCATION_COORDS).filter(([n]) => n !== currentLocation).map(([name, pos]) => (
+        <line key={name} x1={current.x} y1={current.y} x2={pos.x} y2={pos.y} stroke="var(--color-border-tertiary)" strokeWidth="0.3" strokeDasharray="1,2" opacity="0.3" />
+      ))}
+    </svg>
+  );
+}
+
 interface AmbientFragment {
   text: string;
   actionable: boolean;
@@ -170,6 +267,8 @@ export default function EchoGame({ initialSave, onSave, onMenu, onStateChange }:
   const [hudExpanded, setHudExpanded] = useState(true);
   const [pastScenes, setPastScenes] = useState<{ text: string; playerAction?: string }[]>([]);
   const [hints, setHints] = useState<string[]>([]);
+  const [journalOpen, setJournalOpen] = useState(false);
+  const [mapOpen, setMapOpen] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
   const loadingMessage = useEchoLoadingMessage(isThinking);
 
@@ -359,6 +458,18 @@ export default function EchoGame({ initialSave, onSave, onMenu, onStateChange }:
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1.5rem" }}>
           <span style={{ fontSize: "18px", fontWeight: 400, fontFamily: "Georgia, serif", letterSpacing: "0.1em" }}>ECHO</span>
           <div style={{ display: "flex", gap: "16px", alignItems: "center" }}>
+            <span
+              onClick={() => setJournalOpen((v) => !v)}
+              style={{ fontSize: "10px", color: journalOpen ? "var(--color-text-primary)" : "var(--color-text-tertiary)", cursor: "pointer", letterSpacing: "0.06em", transition: "color 0.2s" }}
+            >
+              JOURNAL
+            </span>
+            <span
+              onClick={() => setMapOpen((v) => !v)}
+              style={{ fontSize: "10px", color: mapOpen ? "var(--color-text-primary)" : "var(--color-text-tertiary)", cursor: "pointer", letterSpacing: "0.06em", transition: "color 0.2s" }}
+            >
+              KARTA
+            </span>
             {onSave && (
               <span
                 onClick={isStreaming ? undefined : handleSave}
@@ -402,6 +513,14 @@ export default function EchoGame({ initialSave, onSave, onMenu, onStateChange }:
             <span style={{ color: meta.compliance >= 800 ? "#639922" : meta.compliance >= 400 ? "#BA7517" : "#E24B4A" }}>{meta.compliance}</span>
           </div>
         )}
+        {state?.flags && <Journal flags={state.flags} open={journalOpen} onToggle={() => setJournalOpen((v) => !v)} />}
+
+        {mapOpen && (
+          <div style={{ marginBottom: "1rem", padding: "1rem", background: "var(--color-background-secondary)", borderRadius: "12px", animation: "sceneFadeIn 0.3s ease-out both" }}>
+            <MiniMap currentLocation={meta.location} compliance={meta.compliance} />
+          </div>
+        )}
+
         {isThinking && <EchoThinking message={loadingMessage} />}
 
         {pastScenes.length > 0 && (
