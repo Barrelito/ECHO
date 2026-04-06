@@ -61,15 +61,23 @@ function StatusRow({ meta }: { meta: Meta }) {
   );
 }
 
-function SceneText({ text, streaming }: { text: string; streaming: boolean }) {
-  const paragraphs = text.replace(/\[.*?\]/g, "").trim().split("\n").filter((l) => l.trim());
+function cleanSceneText(text: string): string {
+  // Strip metadata brackets and ---STATE JSON block
+  const stateIdx = text.indexOf("---STATE");
+  const withoutState = stateIdx !== -1 ? text.slice(0, stateIdx) : text;
+  return withoutState.replace(/\[.*?\]/g, "").trim();
+}
+
+function SceneText({ text, streaming, dimmed }: { text: string; streaming: boolean; dimmed?: boolean }) {
+  const cleaned = cleanSceneText(text);
+  const paragraphs = cleaned.split("\n").filter((l) => l.trim());
   return (
-    <div style={{ fontFamily: "Georgia, 'Times New Roman', serif", fontSize: "17px", lineHeight: "1.9", color: "var(--color-text-primary)", marginBottom: "0.5rem" }}>
+    <div style={{ fontFamily: "Georgia, 'Times New Roman', serif", fontSize: dimmed ? "15px" : "17px", lineHeight: "1.9", color: dimmed ? "var(--color-text-tertiary)" : "var(--color-text-primary)", marginBottom: "0.5rem", transition: "color 0.3s" }}>
       {paragraphs.map((p, i) => (
         <p key={i} style={{
           margin: "0 0 1.1em 0",
-          animation: streaming ? "none" : `sceneFadeIn 0.6s ease-out ${i * 0.15}s both`,
-          opacity: streaming ? 1 : undefined,
+          animation: streaming || dimmed ? "none" : `sceneFadeIn 0.6s ease-out ${i * 0.15}s both`,
+          opacity: streaming || dimmed ? 1 : undefined,
         }}>
           {p}
         </p>
@@ -79,6 +87,36 @@ function SceneText({ text, streaming }: { text: string; streaming: boolean }) {
         @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0} }
         @keyframes sceneFadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
       `}</style>
+    </div>
+  );
+}
+
+function ActionHints({ hints, onSelect }: { hints: string[]; onSelect: (hint: string) => void }) {
+  if (hints.length === 0) return null;
+  return (
+    <div style={{ display: "flex", flexWrap: "wrap", gap: "8px", marginBottom: "1rem" }}>
+      {hints.map((hint, i) => (
+        <button
+          key={i}
+          onClick={() => onSelect(hint)}
+          style={{
+            padding: "6px 14px",
+            fontSize: "13px",
+            fontFamily: "Georgia, serif",
+            color: "var(--color-text-secondary)",
+            background: "var(--color-background-secondary)",
+            border: "0.5px solid var(--color-border-tertiary)",
+            borderRadius: "20px",
+            cursor: "pointer",
+            transition: "all 0.2s",
+            animation: `sceneFadeIn 0.4s ease-out ${i * 0.1}s both`,
+          }}
+          onMouseEnter={(e) => { e.currentTarget.style.color = "var(--color-text-primary)"; e.currentTarget.style.borderColor = "var(--color-border-secondary)"; }}
+          onMouseLeave={(e) => { e.currentTarget.style.color = "var(--color-text-secondary)"; e.currentTarget.style.borderColor = "var(--color-border-tertiary)"; }}
+        >
+          {hint}
+        </button>
+      ))}
     </div>
   );
 }
@@ -130,6 +168,8 @@ export default function EchoGame({ initialSave, onSave, onMenu, onStateChange }:
   const [started, setStarted] = useState(!!initialSave);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [hudExpanded, setHudExpanded] = useState(true);
+  const [pastScenes, setPastScenes] = useState<{ text: string; playerAction?: string }[]>([]);
+  const [hints, setHints] = useState<string[]>([]);
   const bottomRef = useRef<HTMLDivElement>(null);
   const loadingMessage = useEchoLoadingMessage(isThinking);
 
@@ -245,24 +285,30 @@ export default function EchoGame({ initialSave, onSave, onMenu, onStateChange }:
 
   async function startGame() {
     setIsThinking(true); setIsStreaming(true); setStreamingText(""); setStarted(true);
-    setHudExpanded(false);
+    setHudExpanded(false); setHints([]);
     stopAmbient();
     let accumulated = "";
     try {
       const res = await fetch("/api/game");
-      await readStream(res, (text) => { accumulated += text; setStreamingText(accumulated); }, (newState, newMeta) => { setScene(accumulated); setStreamingText(""); setState(newState); setMeta(newMeta); setHasUnsavedChanges(true); onStateChange?.(newState, [], accumulated); });
+      await readStream(res, (text) => { accumulated += text; setStreamingText(accumulated); }, (newState, newMeta) => { setScene(accumulated); setStreamingText(""); setState(newState); setMeta(newMeta); setHints(newMeta.hints ?? []); setHasUnsavedChanges(true); onStateChange?.(newState, [], accumulated); });
     } catch { setScene("Systemfel. ECHO svarar inte."); }
     finally { setIsThinking(false); setIsStreaming(false); setHudExpanded(true); startAmbient(); }
   }
 
-  async function sendInput() {
-    if (!input.trim() || isStreaming || !state) return;
-    const playerText = input.trim();
+  async function sendInput(overrideText?: string) {
+    const playerText = (overrideText ?? input).trim();
+    if (!playerText || isStreaming || !state) return;
     setInput("");
+
+    // Push current scene to history
+    if (scene) {
+      setPastScenes((prev) => [...prev, { text: scene, playerAction: playerText }]);
+    }
 
     stopAmbient();
     setAmbientDimmed(true);
     setHudExpanded(false);
+    setHints([]);
 
     const recentTexts = ambientFragments.slice(-3).map((f) => f.text);
 
@@ -285,7 +331,7 @@ export default function EchoGame({ initialSave, onSave, onMenu, onStateChange }:
       await readStream(res, (text) => {
         if (!clearedFragments) { setAmbientFragments([]); setAmbientDimmed(false); clearedFragments = true; }
         accumulated += text; setStreamingText(accumulated);
-      }, (newState, newMeta) => { setScene(accumulated); setStreamingText(""); setState(newState); setMeta(newMeta); setHistory(newHistory); setHasUnsavedChanges(true); onStateChange?.(newState, newHistory, accumulated); });
+      }, (newState, newMeta) => { setScene(accumulated); setStreamingText(""); setState(newState); setMeta(newMeta); setHints(newMeta.hints ?? []); setHistory(newHistory); setHasUnsavedChanges(true); onStateChange?.(newState, newHistory, accumulated); });
     } catch { setScene("Systemfel. ECHO svarar inte."); setAmbientFragments([]); setAmbientDimmed(false); }
     finally { setIsThinking(false); setIsStreaming(false); setHudExpanded(true); startAmbient(); }
   }
@@ -357,10 +403,32 @@ export default function EchoGame({ initialSave, onSave, onMenu, onStateChange }:
           </div>
         )}
         {isThinking && <EchoThinking message={loadingMessage} />}
+
+        {pastScenes.length > 0 && (
+          <div style={{ marginBottom: "1rem" }}>
+            {pastScenes.map((past, i) => (
+              <div key={i} style={{ marginBottom: "0.75rem" }}>
+                {past.playerAction && (
+                  <div style={{ fontSize: "12px", color: "var(--color-text-tertiary)", fontFamily: "var(--font-mono, monospace)", letterSpacing: "0.04em", marginBottom: "0.4rem", paddingLeft: "0.5rem", borderLeft: "2px solid var(--color-border-tertiary)" }}>
+                    {past.playerAction}
+                  </div>
+                )}
+                <div style={{ background: "var(--color-background-primary)", border: "0.5px solid var(--color-border-tertiary)", borderRadius: "12px", padding: "1.25rem 1.5rem", opacity: 0.5 }}>
+                  <SceneText text={past.text} streaming={false} dimmed />
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+
         {displayText && (
           <div style={{ background: "var(--color-background-primary)", border: "0.5px solid var(--color-border-tertiary)", borderRadius: "12px", padding: "2rem 2.25rem", marginBottom: "1.5rem" }}>
             <SceneText text={displayText} streaming={isStreaming} />
           </div>
+        )}
+
+        {!isStreaming && hints.length > 0 && (
+          <ActionHints hints={hints} onSelect={(hint) => sendInput(hint)} />
         )}
 
         {visibleFragments.length > 0 && (
@@ -386,11 +454,11 @@ export default function EchoGame({ initialSave, onSave, onMenu, onStateChange }:
         <div style={{ display: "flex", gap: "8px" }}>
           <input value={input}
             onChange={(e) => { setInput(e.target.value); if (e.target.value) setAmbientPaused(true); else setAmbientPaused(false); }}
-            onKeyDown={(e) => e.key === "Enter" && !e.shiftKey && sendInput()}
+            onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendInput(); } }}
             placeholder={isStreaming ? "ECHO skriver..." : "Vad gör du?"}
             disabled={isStreaming}
             style={{ flex: 1, padding: "12px 16px", fontSize: "14px", border: "0.5px solid var(--color-border-secondary)", borderRadius: "8px", background: "var(--color-background-primary)", color: "var(--color-text-primary)", outline: "none", opacity: isStreaming ? 0.5 : 1, transition: "opacity 0.3s" }} />
-          <button onClick={sendInput} disabled={isStreaming || !input.trim()}
+          <button onClick={() => sendInput()} disabled={isStreaming || !input.trim()}
             style={{ padding: "12px 20px", fontSize: "14px", border: "0.5px solid var(--color-border-secondary)", borderRadius: "8px", background: "transparent", color: "var(--color-text-primary)", cursor: isStreaming || !input.trim() ? "not-allowed" : "pointer", opacity: isStreaming || !input.trim() ? 0.4 : 1, transition: "opacity 0.3s" }}>
             →
           </button>

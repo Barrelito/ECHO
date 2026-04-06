@@ -38,73 +38,53 @@ ${
 ---`.trim();
 }
 
-function parseStateUpdates(
-  responseText: string,
+interface AIStateBlock {
+  location?: string;
+  time?: string;
+  compliance?: number;
+  complianceDelta?: number;
+  inNeuralDive?: boolean;
+  echoAwareness?: "low" | "medium" | "high";
+  flags?: Record<string, boolean>;
+  hints?: string[];
+}
+
+function parseStructuredResponse(fullText: string): { sceneText: string; stateBlock: AIStateBlock | null } {
+  const stateMarker = "---STATE";
+  const idx = fullText.indexOf(stateMarker);
+  if (idx === -1) {
+    return { sceneText: fullText, stateBlock: null };
+  }
+
+  const sceneText = fullText.slice(0, idx).trim();
+  const jsonStr = fullText.slice(idx + stateMarker.length).trim().split("\n")[0];
+
+  try {
+    const stateBlock = JSON.parse(jsonStr) as AIStateBlock;
+    return { sceneText, stateBlock };
+  } catch {
+    return { sceneText, stateBlock: null };
+  }
+}
+
+function applyStateBlock(
   currentState: GameState,
-  playerInput: string
+  block: AIStateBlock | null
 ): GameState {
   const newState = { ...currentState, turnCount: currentState.turnCount + 1 };
-  const lowerInput = playerInput.toLowerCase();
-  const lowerResponse = responseText.toLowerCase();
 
-  if (
-    lowerInput.includes("rapporterar") ||
-    lowerInput.includes("lojal") ||
-    lowerInput.includes("följer") ||
-    lowerInput.includes("scan")
-  ) {
-    newState.compliance = Math.min(1000, newState.compliance + 3);
-  }
-
-  if (
-    lowerInput.includes("motstånd") ||
-    lowerInput.includes("undviker") ||
-    lowerInput.includes("gömmer") ||
-    lowerInput.includes("hackar") ||
-    lowerInput.includes("pionen") ||
-    lowerInput.includes("venerna")
-  ) {
-    newState.compliance = Math.max(0, newState.compliance - 15);
-  }
-
-  if (lowerInput.includes("dyker") || lowerInput.includes("neural")) {
-    newState.inNeuralDive = true;
-    newState.compliance = Math.max(0, newState.compliance - 5);
-  }
-  if (lowerInput.includes("bryter") || lowerInput.includes("kopplar av")) {
-    newState.inNeuralDive = false;
-  }
-
-  if (newState.turnCount > 10 && newState.compliance < 600)
-    newState.echoAwareness = "medium";
-  if (newState.turnCount > 20 && newState.compliance < 400)
-    newState.echoAwareness = "high";
-
-  const locationPatterns: Record<string, string[]> = {
-    "Serverhall Noll": ["serverhall noll", "serverhallen"],
-    Pionen: ["pionen", "bunkern"],
-    Kymlinge: ["kymlinge", "spökstationen"],
-    Venerna: ["venerna", "fjärrvärmetunnl"],
-    "Kista Skrotgård": ["skrotgård", "kista e-waste"],
-    "The Apex": ["the apex", "kista science tower"],
-    "Hammarby Sjöstad": ["hammarby sjöstad"],
-  };
-
-  for (const [location, patterns] of Object.entries(locationPatterns)) {
-    if (patterns.some((p) => lowerResponse.includes(p))) {
-      newState.location = location;
-      break;
+  if (block) {
+    if (block.location) newState.location = block.location;
+    if (block.time) newState.time = block.time;
+    if (typeof block.compliance === "number") {
+      newState.compliance = Math.max(0, Math.min(1000, block.compliance));
+    }
+    if (typeof block.inNeuralDive === "boolean") newState.inNeuralDive = block.inNeuralDive;
+    if (block.echoAwareness) newState.echoAwareness = block.echoAwareness;
+    if (block.flags) {
+      newState.flags = { ...newState.flags, ...block.flags };
     }
   }
-
-  if (lowerResponse.includes("hexagrammet"))
-    newState.flags["found_hexagram_mention"] = true;
-  if (lowerResponse.includes("evelyns röst"))
-    newState.flags["heard_evelyns_voice"] = true;
-  if (lowerResponse.includes("daniel voss"))
-    newState.flags["met_daniel"] = true;
-  if (lowerResponse.includes("kymlinge"))
-    newState.flags["knows_about_kymlinge"] = true;
 
   return newState;
 }
@@ -167,10 +147,8 @@ export async function POST(req: NextRequest) {
           }
         }
 
-        const updatedState = parseStateUpdates(fullText, state, playerInput);
-        const metaMatch = fullText.match(
-          /\[(.+?)\]\s*\[(.+?)\]\s*\[COMPLIANCE:\s*(\d+)\]/
-        );
+        const { stateBlock } = parseStructuredResponse(fullText);
+        const updatedState = applyStateBlock(state, stateBlock);
 
         controller.enqueue(
           encoder.encode(
@@ -178,13 +156,12 @@ export async function POST(req: NextRequest) {
               type: "done",
               state: updatedState,
               meta: {
-                location: metaMatch?.[1] || updatedState.location,
-                time: metaMatch?.[2] || updatedState.time,
-                compliance: metaMatch?.[3]
-                  ? parseInt(metaMatch[3])
-                  : updatedState.compliance,
+                location: updatedState.location,
+                time: updatedState.time,
+                compliance: updatedState.compliance,
                 inNeuralDive: updatedState.inNeuralDive,
                 echoAwareness: updatedState.echoAwareness,
+                hints: stateBlock?.hints ?? [],
               },
             })}\n\n`
           )
@@ -246,17 +223,23 @@ och det nästan omärkbara obehaget under ytan.`,
           }
         }
 
+        const { stateBlock } = parseStructuredResponse(fullText);
+        const updatedOpening = stateBlock
+          ? { ...openingState, ...( stateBlock.location ? { location: stateBlock.location } : {}), ...( stateBlock.time ? { time: stateBlock.time } : {}) }
+          : openingState;
+
         controller.enqueue(
           encoder.encode(
             `data: ${JSON.stringify({
               type: "done",
-              state: openingState,
+              state: updatedOpening,
               meta: {
-                location: "Hammarby Sjöstad",
-                time: "06:47",
+                location: updatedOpening.location,
+                time: updatedOpening.time,
                 compliance: 892,
                 inNeuralDive: false,
                 echoAwareness: "low",
+                hints: stateBlock?.hints ?? [],
               },
             })}\n\n`
           )
