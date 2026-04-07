@@ -546,16 +546,31 @@ function Journal({ flags, open, onToggle }: { flags: Record<string, boolean>; op
     other: "Övrigt",
   };
 
+  if (!open) return null;
+
   return (
-    <div style={{ marginBottom: "1rem" }}>
+    <div style={{ position: "fixed", inset: 0, zIndex: 200, display: "flex", flexDirection: "column" }} onClick={onToggle}>
       <div
-        onClick={onToggle}
-        style={{ display: "flex", justifyContent: "space-between", alignItems: "center", cursor: "pointer", padding: "0.4rem 0", fontSize: "11px", color: "var(--color-text-tertiary)", letterSpacing: "0.06em", textTransform: "uppercase" }}
+        onClick={(e) => e.stopPropagation()}
+        style={{
+          position: "absolute",
+          top: "60px",
+          left: "50%",
+          transform: "translateX(-50%)",
+          width: "min(90vw, 500px)",
+          maxHeight: "70vh",
+          overflowY: "auto",
+          background: "var(--color-background-primary)",
+          border: "1px solid var(--color-border-secondary)",
+          borderRadius: "4px",
+          padding: "1rem",
+          animation: "sceneFadeIn 0.2s ease-out both",
+        }}
       >
-        <span>Upptäckter {discovered.length > 0 ? `(${discovered.length})` : ""}</span>
-        <span style={{ transition: "transform 0.3s", transform: open ? "rotate(180deg)" : "rotate(0)" }}>&#9662;</span>
-      </div>
-      <div style={{ overflow: "hidden", maxHeight: open ? "600px" : "0px", opacity: open ? 1 : 0, transition: "max-height 0.4s ease, opacity 0.3s ease" }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.75rem", fontSize: "11px", color: "var(--color-text-tertiary)", letterSpacing: "0.06em", textTransform: "uppercase" }}>
+          <span>Upptäckter {discovered.length > 0 ? `(${discovered.length})` : ""}</span>
+          <span onClick={onToggle} style={{ cursor: "pointer", fontSize: "14px", color: "var(--color-text-tertiary)" }}>✕</span>
+        </div>
         {discovered.length === 0 ? (
           <div style={{ fontSize: "13px", fontFamily: "var(--font-mono, monospace)", color: "var(--color-text-tertiary)", padding: "0.5rem 0" }}>
             Inga upptäckter ännu. Utforska världen.
@@ -775,7 +790,6 @@ export default function EchoGame({ initialSave, onSave, onMenu, onStateChange }:
   const [revealedCount, setRevealedCount] = useState(0);
   const isRevealing = revealParagraphs.length > 0 && revealedCount < revealParagraphs.length;
   const allRevealed = revealParagraphs.length > 0 && revealedCount >= revealParagraphs.length;
-  const bottomRef = useRef<HTMLDivElement>(null);
   const loadingMessage = useEchoLoadingMessage(isThinking);
 
   // Ambient state
@@ -820,32 +834,7 @@ export default function EchoGame({ initialSave, onSave, onMenu, onStateChange }:
     return () => window.removeEventListener("keydown", handleKey);
   }, [isRevealing, advanceReveal]);
 
-  const scrollRafRef = useRef<number | null>(null);
-  const smoothScrollTo = useCallback((target: number) => {
-    if (scrollRafRef.current) cancelAnimationFrame(scrollRafRef.current);
-    const start = window.scrollY;
-    const distance = target - start;
-    if (Math.abs(distance) < 2) return;
-    const duration = Math.min(800, Math.max(300, Math.abs(distance) * 1.5));
-    const startTime = performance.now();
-    function step(now: number) {
-      const elapsed = now - startTime;
-      const progress = Math.min(elapsed / duration, 1);
-      const ease = progress < 0.5
-        ? 2 * progress * progress
-        : 1 - Math.pow(-2 * progress + 2, 2) / 2;
-      window.scrollTo(0, start + distance * ease);
-      if (progress < 1) scrollRafRef.current = requestAnimationFrame(step);
-      else scrollRafRef.current = null;
-    }
-    scrollRafRef.current = requestAnimationFrame(step);
-  }, []);
-
-  useEffect(() => {
-    if (!bottomRef.current) return;
-    const targetY = bottomRef.current.getBoundingClientRect().top + window.scrollY - window.innerHeight + 80;
-    if (targetY > window.scrollY) smoothScrollTo(targetY);
-  }, [streamingText, isThinking, ambientFragments, revealedCount, smoothScrollTo]);
+  // Player controls their own scrolling — no autoscroll
 
   // Page Visibility API
   useEffect(() => {
@@ -1186,8 +1175,29 @@ export default function EchoGame({ initialSave, onSave, onMenu, onStateChange }:
         {state?.flags && <Journal flags={state.flags} open={journalOpen} onToggle={() => setJournalOpen((v) => !v)} />}
 
         {mapOpen && (
-          <div style={{ marginBottom: "1rem", padding: "1rem", background: "var(--color-background-secondary)", borderRadius: "4px", animation: "sceneFadeIn 0.3s ease-out both" }}>
-            <MiniMap currentLocation={meta.location} compliance={meta.compliance} />
+          <div style={{ position: "fixed", inset: 0, zIndex: 200 }} onClick={() => setMapOpen(false)}>
+            <div
+              onClick={(e) => e.stopPropagation()}
+              style={{
+                position: "absolute",
+                top: "60px",
+                left: "50%",
+                transform: "translateX(-50%)",
+                width: "min(90vw, 500px)",
+                maxHeight: "70vh",
+                overflowY: "auto",
+                background: "var(--color-background-primary)",
+                border: "1px solid var(--color-border-secondary)",
+                borderRadius: "4px",
+                padding: "1rem",
+                animation: "sceneFadeIn 0.2s ease-out both",
+              }}
+            >
+              <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: "0.5rem" }}>
+                <span onClick={() => setMapOpen(false)} style={{ cursor: "pointer", fontSize: "14px", color: "var(--color-text-tertiary)" }}>✕</span>
+              </div>
+              <MiniMap currentLocation={meta.location} compliance={meta.compliance} />
+            </div>
           </div>
         )}
 
@@ -1215,17 +1225,10 @@ export default function EchoGame({ initialSave, onSave, onMenu, onStateChange }:
           </div>
         )}
 
-        {/* Streaming: show text as it arrives */}
-        {isStreaming && !isThinking && streamingText && (
+        {/* Current scene: show streaming text as it arrives, then keep showing final scene in-place */}
+        {((isStreaming && !isThinking && streamingText) || (!isStreaming && scene)) && (
           <div style={{ borderTop: "1px solid var(--color-border-secondary)", padding: "1rem 0", marginBottom: "1.5rem" }}>
-            <SceneText text={streamingText} streaming={true} compliance={meta.compliance} />
-          </div>
-        )}
-
-        {/* Current scene: show after streaming is complete */}
-        {!isStreaming && scene && (
-          <div style={{ borderTop: "1px solid var(--color-border-secondary)", padding: "1rem 0", marginBottom: "1.5rem" }}>
-            <SceneText text={scene} streaming={false} compliance={meta.compliance} skipAnimation={justStreamed} />
+            <SceneText text={isStreaming ? streamingText : scene} streaming={isStreaming} compliance={meta.compliance} skipAnimation={justStreamed || isStreaming} />
           </div>
         )}
 
@@ -1293,7 +1296,6 @@ export default function EchoGame({ initialSave, onSave, onMenu, onStateChange }:
             disabled={isStreaming}
             style={{ flex: 1, padding: "10px 0", fontSize: isMobile ? "16px" : "14px", border: "none", borderBottom: `1px solid ${pressureData ? "var(--color-accent-red)" : "var(--color-accent-teal)"}`, borderRadius: 0, background: "transparent", color: "var(--color-accent-green)", caretColor: "var(--color-accent-green)", outline: "none", fontFamily: "inherit", letterSpacing: "0.02em" }} />
         </div>
-        <div ref={bottomRef} />
 
         {/* Discovery toast — show one at a time from queue */}
         {discoveryQueue.length > 0 && (
