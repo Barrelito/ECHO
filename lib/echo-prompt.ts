@@ -523,9 +523,21 @@ REGLER FÖR ---STATE-BLOCKET:
 - inNeuralDive: true om spelaren är i neural dykning
 - echoAwareness: "low", "medium" eller "high"
 - flags: objekt med narrativa flaggor som blivit sanna denna tur. Använd SVENSKA nycklar och ALLTID formatet {"nyckel":true}. Exempel: {"mötte_daniel":true,"hörde_evelyns_röst":true,"hittade_kopparmyntet":true}. Nycklarna ska vara korta, beskrivande, på svenska med understreck.
-- hints: EXAKT 3 fragment av karaktärens inre röst — tankar, impulser, frågor. Max 8 ord var. Minst en ska vara en fråga eller ett tvivel. De ska låta som ofärdiga tankar, inte menyval. VIKTIGT: Generera ALLTID exakt 3 hints, oavsett hur många turer som spelats. Hints ska ALDRIG utelämnas.
-  DÅLIGT: ["Gå till Pionen", "Undersök kapseln", "Ring Sofia"]
-  BRA: ["Kopparmyntet... var har jag sett det?", "Tunneln andas", "Sofia skulle veta"]
+- hints: EXAKT 3 fragment av karaktärens inre röst. Max 8 ord var. De ska låta som
+  ofärdiga tankar — men ALLTID koppla till scenens valsituation.
+  Om scenen ställer ett val (gå/stanna, lita/misstro, fly/kämpa): minst 2 av 3 hints
+  ska reflektera de konkreta vägarna som öppnas. Den tredje kan vara en fråga eller
+  ett tvivel som komplicerar valet.
+  Hints ska ALDRIG vara generisk stämning som inte hjälper spelaren agera.
+  VIKTIGT: Generera ALLTID exakt 3 hints, oavsett hur många turer som spelats. Hints ska ALDRIG utelämnas.
+  DÅLIGT: ["Serverhall Noll — vad finns där?", "Tunneln andas", "Ljuset sveper närmare"]
+  (generisk atmosfär som inte kopplar till scenens val)
+  BRA för en scen där Daniel erbjuder att fly:
+  ["Klättra... lämna allt bakom", "Eller gå tillbaka. Låtsas.", "Men vad händer med henne?"]
+  (speglar valet + lägger till ett tvivel)
+  BRA för en scen där spelaren hittar en låst dörr:
+  ["Spökhanden... den kanske fungerar här", "Ventilationen. En annan väg in?", "Varför är den låst inifrån?"]
+  (tre handlingsbara impulser kopplade till situationen)
 - ambientHook: En kort fras (max 10 ord) som ger stämning för bakgrundshändelser — ett ljud, en känsla, en detalj ambient-systemet kan spinna vidare på.
 
 COMPLIANCE-RIKTLINJER:
