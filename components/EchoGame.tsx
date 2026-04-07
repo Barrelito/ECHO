@@ -104,7 +104,7 @@ function ComplianceBar({ value, delta }: { value: number; delta?: number }) {
           background: color,
           borderRadius: "2px",
           transition: "width 1.2s ease, background 1.2s ease",
-          boxShadow: flash ? `0 0 8px ${color}` : "none",
+          boxShadow: `0 0 8px ${color}66`,
         }} />
       </div>
       {/* Milestone markers */}
@@ -135,7 +135,7 @@ function StatusRow({ meta }: { meta: Meta }) {
         { label: "Tid", value: meta.time },
         { label: "ECHO", value: meta.inNeuralDive ? "⬡ NEURAL DYKNING" : `Medvetenhet: ${meta.echoAwareness}` },
       ].map(({ label, value }) => (
-        <div key={label} style={{ background: "var(--color-background-secondary)", borderRadius: "8px", padding: "0.6rem 0.75rem" }}>
+        <div key={label} style={{ borderLeft: "2px solid var(--color-border-secondary)", padding: "0.4rem 0.75rem" }}>
           <div style={{ fontSize: "10px", color: "var(--color-text-tertiary)", textTransform: "uppercase", letterSpacing: "0.07em", marginBottom: "3px" }}>{label}</div>
           <div style={{ fontSize: "12px", color: meta.inNeuralDive && label === "ECHO" ? "#534AB7" : "var(--color-text-primary)", fontWeight: 500 }}>{value}</div>
         </div>
@@ -1012,14 +1012,14 @@ export default function EchoGame({ initialSave, onSave, onMenu, onStateChange }:
           position: "sticky",
           top: 0,
           zIndex: 10,
-          background: "var(--color-background-primary)",
+          background: "linear-gradient(to bottom, var(--color-background-primary) 60%, transparent)",
           paddingTop: "0.75rem",
           paddingBottom: "0.5rem",
           marginBottom: "0.75rem",
         }}>
           {/* Top row: title + nav */}
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.5rem" }}>
-            <span style={{ fontSize: isMobile ? "16px" : "18px", fontWeight: 400, fontFamily: "Georgia, serif", letterSpacing: "0.1em" }}>ECHO</span>
+            <span style={{ fontSize: isMobile ? "14px" : "13px", fontWeight: 400, fontFamily: "var(--font-mono, monospace)", letterSpacing: "0.1em", color: "var(--color-accent-green)", textShadow: "0 0 8px rgba(0,255,136,0.5)" }}>ECHO</span>
             <div style={{ display: "flex", gap: isMobile ? "6px" : "16px", alignItems: "center" }}>
               {([
                 { label: "JOURNAL", active: journalOpen, onClick: () => setJournalOpen((v) => !v) },
@@ -1032,9 +1032,10 @@ export default function EchoGame({ initialSave, onSave, onMenu, onStateChange }:
                   onClick={onClick}
                   style={{
                     fontSize: isMobile ? "11px" : "10px",
-                    color: active ? "var(--color-text-primary)" : "var(--color-text-tertiary)",
+                    color: active ? "var(--color-accent-green)" : "var(--color-accent-teal)",
                     cursor: onClick ? "pointer" : "default",
                     letterSpacing: "0.06em",
+                    fontFamily: "var(--font-mono, monospace)",
                     transition: "color 0.2s",
                     padding: isMobile ? "8px 6px" : "0",
                     minHeight: isMobile ? "44px" : "auto",
@@ -1043,7 +1044,7 @@ export default function EchoGame({ initialSave, onSave, onMenu, onStateChange }:
                     opacity: label === "SPARA" && isStreaming ? 0.4 : 1,
                   }}
                 >
-                  {label}
+                  <><span style={{ marginRight: "3px" }}>&gt;</span> {label}</>
                 </span>
               ))}
               <span style={{ fontSize: "11px", color: "var(--color-text-tertiary)", letterSpacing: "0.08em", textTransform: "uppercase", padding: isMobile ? "8px 0" : "0" }}>Tur {state?.turnCount ?? 0}</span>
@@ -1074,7 +1075,7 @@ export default function EchoGame({ initialSave, onSave, onMenu, onStateChange }:
             <ComplianceBar value={meta.compliance} delta={complianceDelta} />
             <StatusRow meta={meta} />
             {meta.inNeuralDive && (
-              <div style={{ background: "#EEEDFE", border: "0.5px solid #AFA9EC", borderRadius: "8px", padding: "0.6rem 1rem", fontSize: "12px", color: "#3C3489", marginBottom: "0.5rem", letterSpacing: "0.04em" }}>
+              <div style={{ background: "rgba(83, 74, 183, 0.08)", border: "1px solid rgba(83, 74, 183, 0.4)", borderRadius: "4px", padding: "0.6rem 1rem", fontSize: "12px", color: "#8B7FE8", marginBottom: "0.5rem", letterSpacing: "0.04em" }}>
                 ⬡ NEURAL DYKNING AKTIV — compliance sjunker vid förlängd exponering
               </div>
             )}
@@ -1083,7 +1084,7 @@ export default function EchoGame({ initialSave, onSave, onMenu, onStateChange }:
         {state?.flags && <Journal flags={state.flags} open={journalOpen} onToggle={() => setJournalOpen((v) => !v)} />}
 
         {mapOpen && (
-          <div style={{ marginBottom: "1rem", padding: "1rem", background: "var(--color-background-secondary)", borderRadius: "12px", animation: "sceneFadeIn 0.3s ease-out both" }}>
+          <div style={{ marginBottom: "1rem", padding: "1rem", background: "var(--color-background-secondary)", borderRadius: "4px", animation: "sceneFadeIn 0.3s ease-out both" }}>
             <MiniMap currentLocation={meta.location} compliance={meta.compliance} />
           </div>
         )}
