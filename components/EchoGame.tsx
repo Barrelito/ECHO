@@ -52,6 +52,7 @@ function ComplianceDelta({ delta }: { delta: number }) {
       fontFamily: "var(--font-mono, monospace)",
       fontWeight: 600,
       color,
+      textShadow: `0 0 8px ${color}88`,
       animation: "deltaFadeUp 2.5s ease-out forwards",
       marginLeft: "8px",
     }}>
@@ -657,17 +658,17 @@ function DiscoveryToast({ flagKey, onDone }: { flagKey: string; onDone: () => vo
       transform: "translateX(-50%)",
       zIndex: 100,
       background: "var(--color-background-secondary)",
-      border: "0.5px solid var(--color-border-secondary)",
-      borderRadius: "10px",
+      border: "1px solid var(--color-accent-green)",
+      borderRadius: "0",
       padding: "0.6rem 1.2rem",
       maxWidth: "400px",
-      animation: "toastIn 3.5s ease-out forwards",
-      boxShadow: "0 4px 20px rgba(0,0,0,0.1)",
+      animation: "glitchFlicker 0.15s ease-out",
+      boxShadow: "0 0 12px rgba(0,255,136,0.15)",
     }}>
       <div style={{ fontSize: "9px", color: "var(--color-text-tertiary)", letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: "3px" }}>
         Ny upptäckt
       </div>
-      <div style={{ fontSize: "13px", fontFamily: "Georgia, serif", color: "var(--color-text-primary)", lineHeight: 1.4 }}>
+      <div style={{ fontSize: "13px", fontFamily: "monospace", color: "var(--color-text-primary)", lineHeight: 1.4 }}>
         {label}
       </div>
       <style>{`
