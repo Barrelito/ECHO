@@ -12,9 +12,12 @@ function buildAmbientContext(req: AmbientRequest): string {
     .map(([k]) => k)
     .join(", ");
 
+  const complianceTier = state.compliance >= 800 ? "GRÖN" : state.compliance >= 400 ? "AMBER" : state.compliance >= 100 ? "RÖD" : "RADERAD";
+
   return `PLATS: ${state.location}
 TID: ${state.time}
 COMPLIANCE: ${state.compliance}
+COMPLIANCE-TIER: ${complianceTier}
 FRAKTION: ${state.faction}
 NEURAL DYKNING: ${state.inNeuralDive ? "AKTIV" : "Inaktiv"}
 FLAGGOR: ${flags || "Inga"}

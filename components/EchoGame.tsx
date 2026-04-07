@@ -68,7 +68,110 @@ function cleanSceneText(text: string): string {
   return withoutState.replace(/\[.*?\]/g, "").trim();
 }
 
-function SceneText({ text, streaming, dimmed }: { text: string; streaming: boolean; dimmed?: boolean }) {
+// Compliance color helper
+function complianceColor(compliance: number): string {
+  return compliance >= 800 ? "#639922" : compliance >= 400 ? "#BA7517" : "#E24B4A";
+}
+
+// Voice marker types
+type VoiceSegment =
+  | { type: "narrator"; text: string }
+  | { type: "echo"; text: string }
+  | { type: "thought"; text: string }
+  | { type: "dialog"; name: string; text: string };
+
+// Parse a paragraph for «ECHO:», «TANKE:», «DIALOG: Name:» markers
+function parseVoiceMarkers(paragraph: string): VoiceSegment[] {
+  const segments: VoiceSegment[] = [];
+  const regex = /«(ECHO|TANKE|DIALOG):\s*((?:[^:»]+:\s*)?)(.*?)»/g;
+  let lastIndex = 0;
+  let match;
+
+  while ((match = regex.exec(paragraph)) !== null) {
+    // Text before marker
+    if (match.index > lastIndex) {
+      const before = paragraph.slice(lastIndex, match.index).trim();
+      if (before) segments.push({ type: "narrator", text: before });
+    }
+
+    const kind = match[1];
+    if (kind === "ECHO") {
+      segments.push({ type: "echo", text: match[3].trim() });
+    } else if (kind === "TANKE") {
+      segments.push({ type: "thought", text: match[3].trim() });
+    } else if (kind === "DIALOG") {
+      const nameMatch = match[2].trim().replace(/:$/, "");
+      segments.push({ type: "dialog", name: nameMatch, text: match[3].trim() });
+    }
+    lastIndex = match.index + match[0].length;
+  }
+
+  // Remaining text
+  if (lastIndex < paragraph.length) {
+    const rest = paragraph.slice(lastIndex).trim();
+    if (rest) segments.push({ type: "narrator", text: rest });
+  }
+
+  // If no markers found, return entire paragraph as narrator
+  if (segments.length === 0 && paragraph.trim()) {
+    segments.push({ type: "narrator", text: paragraph.trim() });
+  }
+
+  return segments;
+}
+
+// Render a single voice segment
+function VoiceSegmentRenderer({ segment, compliance }: { segment: VoiceSegment; compliance: number }) {
+  if (segment.type === "echo") {
+    const echoColor = compliance < 100 ? "#78716c" : complianceColor(compliance);
+    return (
+      <div style={{
+        fontFamily: "var(--font-mono, monospace)",
+        fontSize: "12px",
+        color: echoColor,
+        letterSpacing: "0.04em",
+        padding: "0.4rem 0 0.4rem 0.75rem",
+        borderLeft: `2px solid ${echoColor}`,
+        margin: "0.5em 0",
+        opacity: 0.85,
+      }}>
+        {segment.text}
+      </div>
+    );
+  }
+  if (segment.type === "thought") {
+    return <span style={{ fontStyle: "italic", color: "var(--color-text-secondary)" }}>{segment.text}</span>;
+  }
+  if (segment.type === "dialog") {
+    return (
+      <span>
+        <span style={{ fontVariant: "small-caps", fontSize: "0.85em", color: "var(--color-text-tertiary)", marginRight: "0.4em" }}>{segment.name}</span>
+        <span style={{ fontWeight: 500 }}>&ldquo;{segment.text}&rdquo;</span>
+      </span>
+    );
+  }
+  return <span>{segment.text}</span>;
+}
+
+// Render a paragraph with voice markers parsed
+function StyledParagraph({ text, compliance, style }: { text: string; compliance: number; style?: React.CSSProperties }) {
+  const segments = parseVoiceMarkers(text);
+  const isFullBlockEcho = segments.length === 1 && segments[0].type === "echo";
+
+  if (isFullBlockEcho) {
+    return <VoiceSegmentRenderer segment={segments[0]} compliance={compliance} />;
+  }
+
+  return (
+    <p style={{ margin: "0 0 1.1em 0", ...style }}>
+      {segments.map((seg, i) => (
+        <VoiceSegmentRenderer key={i} segment={seg} compliance={compliance} />
+      ))}
+    </p>
+  );
+}
+
+function SceneText({ text, streaming, dimmed, compliance = 892 }: { text: string; streaming: boolean; dimmed?: boolean; compliance?: number }) {
   const cleaned = cleanSceneText(text);
   const paragraphs = cleaned.split("\n").filter((l) => l.trim());
   // For dimmed (past) scenes with many paragraphs, show first and last with ellipsis
@@ -78,17 +181,18 @@ function SceneText({ text, streaming, dimmed }: { text: string; streaming: boole
     : paragraphs;
   return (
     <div style={{ fontFamily: "Georgia, 'Times New Roman', serif", fontSize: dimmed ? "15px" : "17px", lineHeight: "1.9", color: dimmed ? "var(--color-text-tertiary)" : "var(--color-text-primary)", marginBottom: "0.5rem", transition: "color 0.3s" }}>
-      {displayParagraphs.map((p, i) => (
-        <p key={i} style={{
-          margin: "0 0 1.1em 0",
-          animation: streaming || dimmed ? "none" : `sceneFadeIn 0.6s ease-out ${i * 0.15}s both`,
-          opacity: streaming || dimmed ? 1 : undefined,
-          textAlign: p === "…" ? "center" : undefined,
-          color: p === "…" ? "var(--color-text-tertiary)" : undefined,
-        }}>
-          {p}
-        </p>
-      ))}
+      {displayParagraphs.map((p, i) =>
+        p === "…" ? (
+          <p key={i} style={{ margin: "0 0 1.1em 0", textAlign: "center", color: "var(--color-text-tertiary)" }}>…</p>
+        ) : (
+          <div key={i} style={{
+            animation: streaming || dimmed ? "none" : `sceneFadeIn 0.6s ease-out ${i * 0.15}s both`,
+            opacity: streaming || dimmed ? 1 : undefined,
+          }}>
+            <StyledParagraph text={p} compliance={compliance} />
+          </div>
+        )
+      )}
       {streaming && <span style={{ display: "inline-block", width: "2px", height: "1.1em", background: "var(--color-text-tertiary)", marginLeft: "2px", verticalAlign: "text-bottom", animation: "blink 1s step-end infinite" }} />}
       <style>{`
         @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0} }
@@ -98,12 +202,13 @@ function SceneText({ text, streaming, dimmed }: { text: string; streaming: boole
   );
 }
 
-function RevealingScene({ paragraphs, revealedCount, onAdvance, allRevealed, sceneType }: {
+function RevealingScene({ paragraphs, revealedCount, onAdvance, allRevealed, sceneType, compliance = 892 }: {
   paragraphs: string[];
   revealedCount: number;
   onAdvance: () => void;
   allRevealed: boolean;
   sceneType?: string;
+  compliance?: number;
 }) {
   // Auto-advance for PULS scenes
   useEffect(() => {
@@ -124,14 +229,13 @@ function RevealingScene({ paragraphs, revealedCount, onAdvance, allRevealed, sce
           const isLatest = i === revealedCount - 1;
           const isPast = i < revealedCount - 1;
           return (
-            <p key={i} style={{
-              margin: "0 0 1.1em 0",
-              color: isPast ? "var(--color-text-secondary)" : "var(--color-text-primary)",
+            <div key={i} style={{
               animation: isLatest ? `sceneFadeIn ${fadeInDuration} ease-out both` : "none",
               transition: "color 0.4s ease",
+              color: isPast ? "var(--color-text-secondary)" : "var(--color-text-primary)",
             }}>
-              {p}
-            </p>
+              <StyledParagraph text={p} compliance={compliance} />
+            </div>
           );
         })}
       </div>
@@ -184,6 +288,65 @@ function ActionHints({ hints, onSelect }: { hints: string[]; onSelect: (hint: st
           — {hint}
         </button>
       ))}
+    </div>
+  );
+}
+
+// Local ECHO system voice messages — compliance-aware, no AI cost
+const ECHO_VOICE_MESSAGES: Record<string, string[]> = {
+  green: [
+    "God morgon. Optimal luftkvalitet idag.",
+    "Din hälsorapport är tillgänglig. Alla värden normala.",
+    "Transporttid optimerad: 12 minuter.",
+    "Sömnkvalitet: 94%. Rekommendation: behåll nuvarande rutin.",
+    "Ditt näringsintag är balanserat. Bra val igår.",
+    "Compliance-status: exemplarisk. Tack för ditt bidrag.",
+  ],
+  amber: [
+    "Compliance-rapport tillgänglig.",
+    "Rörelsemönster analyseras.",
+    "Zon 4 kräver godkännande vid passage.",
+    "Avvikande ruttval noterat.",
+    "Biometrisk verifiering pågår.",
+    "Aktivitetslogg uppdaterad.",
+  ],
+  red: [
+    "Varning: Avvikande beteende registrerat.",
+    "Compliance under gränsvärde. Omedelbar korrigering rekommenderas.",
+    "Icke-auktoriserad zon. Vänligen återvänd.",
+    "Biometriskt ID: begränsad åtkomst.",
+    "Säkerhetsprotokoll aktiverat.",
+  ],
+  deleted: [
+    "███ ██ raderad ██ ███",
+    "...",
+    "█████████",
+    "",
+  ],
+};
+
+function EchoSystemVoice({ compliance }: { compliance: number }) {
+  const tier = compliance >= 800 ? "green" : compliance >= 400 ? "amber" : compliance >= 100 ? "red" : "deleted";
+  const messages = ECHO_VOICE_MESSAGES[tier];
+  const [msg] = useState(() => messages[Math.floor(Math.random() * messages.length)]);
+  const echoColor = compliance < 100 ? "#78716c" : complianceColor(compliance);
+
+  if (!msg) return null;
+
+  return (
+    <div style={{
+      fontFamily: "var(--font-mono, monospace)",
+      fontSize: "11px",
+      letterSpacing: "0.06em",
+      textTransform: "uppercase",
+      color: echoColor,
+      borderLeft: `2px solid ${echoColor}`,
+      padding: "0.3rem 0 0.3rem 0.75rem",
+      marginBottom: "0.75rem",
+      opacity: 0.7,
+      animation: "sceneFadeIn 0.8s ease-out both",
+    }}>
+      {msg}
     </div>
   );
 }
@@ -668,6 +831,11 @@ export default function EchoGame({ initialSave, onSave, onMenu, onStateChange }:
 
         {isThinking && <EchoThinking message={loadingMessage} />}
 
+        {/* ECHO system voice: show every 2-3 turns, not during streaming */}
+        {!isStreaming && !isThinking && state && state.turnCount > 0 && state.turnCount % 3 === 0 && (
+          <EchoSystemVoice compliance={meta.compliance} />
+        )}
+
         {pastScenes.length > 0 && (
           <div style={{ marginBottom: "1rem" }}>
             {pastScenes.map((past, i) => (
@@ -678,7 +846,7 @@ export default function EchoGame({ initialSave, onSave, onMenu, onStateChange }:
                   </div>
                 )}
                 <div style={{ background: "var(--color-background-primary)", border: "0.5px solid var(--color-border-tertiary)", borderRadius: "12px", padding: "1.25rem 1.5rem", opacity: 0.5 }}>
-                  <SceneText text={past.text} streaming={false} dimmed />
+                  <SceneText text={past.text} streaming={false} dimmed compliance={meta.compliance} />
                 </div>
               </div>
             ))}
@@ -687,7 +855,7 @@ export default function EchoGame({ initialSave, onSave, onMenu, onStateChange }:
 
         {isStreaming && !isThinking && streamingText && revealParagraphs.length === 0 && (
           <div style={{ background: "var(--color-background-primary)", border: "0.5px solid var(--color-border-tertiary)", borderRadius: "12px", padding: "2rem 2.25rem", marginBottom: "1.5rem" }}>
-            <SceneText text={streamingText} streaming={true} />
+            <SceneText text={streamingText} streaming={true} compliance={meta.compliance} />
           </div>
         )}
 
@@ -699,6 +867,7 @@ export default function EchoGame({ initialSave, onSave, onMenu, onStateChange }:
               onAdvance={advanceReveal}
               allRevealed={allRevealed}
               sceneType={meta.sceneType}
+              compliance={meta.compliance}
             />
           </div>
         )}

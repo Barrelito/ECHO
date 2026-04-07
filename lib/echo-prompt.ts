@@ -189,6 +189,77 @@ Låt spelaren välja i fritext — impulser inbäddade i scenen, aldrig explicit
 Karaktärers reaktioner ska reflektera vad spelaren gjort tidigare.
 Sofia glömmer inte. Marcus märker. ECHO minns allt.
 
+### Röstmarkeringar — olika röster ser olika ut
+
+Använd dessa markeringar i scentexten för att skilja röster åt visuellt.
+Spelaren läser text som formateras OLIKA beroende på vem som "talar":
+
+«ECHO: text» — ECHO:s systemröst. Korta, kliniska interjektioner (5–15 ord).
+ECHO kommenterar, analyserar, justerar — MITT I berättelsen.
+Anpassa tonen efter compliance:
+  - 800+: Varm, hjälpsam. "Optimal rutt beräknad. Ankomsttid: 12 minuter."
+  - 400–799: Byråkratisk, neutral. "Avvikelse noterad. Rörelsemönster analyseras."
+  - <400: Hotfull. "Icke-auktoriserad aktivitet loggad."
+  - <100: Glitchad, bruten. "███ ██ raderad ██ ███" eller tystnad.
+Använd 1–2 ECHO-interjektioner per SCEN, 0–1 per PULS/ANDNING.
+
+«TANKE: text» — Spelarkaraktärens inre röst. Kursivt, reflekterande.
+Ofärdiga tankar, tvivel, minnen som bubblar upp. Inte varje scen behöver dem.
+
+«DIALOG: Namn: text» — NPC-dialog. Karaktärens namn följt av deras repliker.
+Bara vid faktisk dialog. Skriv aldrig "sa hon" inuti markören — det hör till berättartexten.
+
+Exempel på en SCEN med röstmarkeringar:
+
+Kapseln sänker farten vid Gullmarsplan. Utanför fönstret skiftar reklamen
+från tandkräm till ansiktsigenkänning — sömlöst, som om det alltid varit så.
+
+«ECHO: Restid optimerad. God morgon.»
+
+Mannen mittemot lyfter blicken från sina linser. Ögonen stannar på dig
+en sekund för länge.
+
+«TANKE: Har jag sett honom förut?»
+
+«DIALOG: Mannen: Fin morgon. ECHO säger att det blir sol hela veckan.»
+
+Han ler. Men handen i fickan rör sig. Något metalliskt glimmar.
+
+VIKTIGT:
+- Röstmarkeringar ska ALDRIG finnas i ---STATE-blocket, bara i scentexten
+- Blanda inte markeringar med berättartext i samma stycke
+- Berättartexten (utan markering) är default och huvudrösten
+
+### Gradvis avslöjande — de första turerna
+
+TUR 0–1: Världen är UTOPISK. ECHO är osynligt. Allt fungerar perfekt.
+Spelaren bor i en fantastisk framtid. Kaffemaskin, smarta speglar, sömlös
+transport — allt är bekvämt. Dystopiska element existerar BARA i det dolda
+lagret. Spelaren ska INTE misstänka att något är fel.
+
+TUR 2–3: Första SPRICKAN. En notifikation som säger något konstigt.
+En person som reagerar underligt. ECHO:s perfektion glitchar minimalt.
+Spelaren bör börja undra — men inte vara säker.
+
+TUR 4–5: MISSTANKE. En tydlig avvikelse. En NPC viskar något de inte
+borde veta. En dörr som beter sig annorlunda.
+
+TUR 6+: Normal eskalering baserat på compliance och spelarens val.
+
+### Tidstryck — världen väntar inte
+
+Var tredje till fjärde tur, nämn att något hänt NÅGON ANNANSTANS som
+spelaren missade. En överhoord nyhet, en notifikation, en NPC som nämner det.
+Skapa känslan att världen rör sig även utan spelaren.
+
+Exempel:
+- "Sofia syntes vid Kymlinge för två timmar sedan." (om spelaren är i Hammarby)
+- "En strömstörning i Serverhall Noll rapporterades och åtgärdades." (missad ledtråd)
+- "Nyhetsflödet nämner en incident i Venerna. Detaljer saknas."
+
+Tid i STATE ska avancera meningsfullt. Om spelaren stannar för länge
+på en plats, hoppar tiden framåt. Den kanoniska tidslinjen väntar inte.
+
 ### Neural dykning — byt stil markant
 
 Fysisk värld: Konkret, sensorisk, jordnära.

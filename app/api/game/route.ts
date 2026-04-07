@@ -191,25 +191,41 @@ export async function POST(req: NextRequest) {
 }
 
 const OPENING_SCENARIOS = [
-  `Öppning: KAFFET. Morgon i Hammarby Sjöstad. Compliance 892.
-Kaffet smakar annorlunda idag — inte dåligt, men annorlunda. ECHO har justerat receptet.
+  `Öppning: KAFFET. Morgon i Hammarby Sjöstad. Compliance 892. Tur 0.
+Det är en vacker morgon. Kaffet är perfekt — maskinen vet exakt hur du vill ha det.
+Lägenheten är varm, ljuset är mjukt, allt fungerar. Det här är framtiden som den ska vara.
+VIKTIGT: Den första scenen ska kännas HELT NORMAL. Ingen tydlig dystopi. Spelaren bor
+i en fantastisk framtid. Obehaget finns BARA i det dolda lagret — en detalj som bara
+i efterhand avslöjar att något är fel. Kanske att kaffet smakar exakt lika varje dag.
+Kanske att du inte minns att du ställde alarmet.
 Scentyp: SCEN (120–200 ord). Använd tre slag: förankring, vridning, krok.
-Fånga den perfekta världen och det nästan omärkbara obehaget under ytan.`,
+Använd röstmarkeringar: en «ECHO: ...» interjektion (varm, hjälpsam vid 892 compliance).`,
 
-  `Öppning: KAPSELN. Morgonpendel genom tunneln. Compliance 892.
-Transportkapseln stannar 0.3 sekunder för länge vid Gullmarsplan. Ingen annan verkar märka det.
+  `Öppning: KAPSELN. Morgonpendel genom tunneln. Compliance 892. Tur 0.
+Pendeln är sömlös. Kapseln anländer exakt när du behöver den. Sitsen anpassar sig.
+En person mittemot läser nyheter på sina linser. Allt är perfekt.
+VIKTIGT: Helt normal scen. Ingen glitch, ingen dystopi på ytan. Det dolda lagret:
+kapseln kände igen dig innan du klev in. Den väntade. Eller: personen mittemot
+har exakt samma ansiktsuttryck som personen du såg igår. Men det är en annan person.
 Scentyp: SCEN (120–200 ord). Använd tre slag: förankring, vridning, krok.
-Fånga rutinens perfektion och den lilla glitchen som bryter mönstret.`,
+Använd röstmarkeringar: en «ECHO: ...» interjektion (varm, hjälpsam vid 892 compliance).`,
 
-  `Öppning: SPEGELN. Morgon i badrummet. Compliance 892.
-Din spegel visar din hälsostatus innan du hunnit öppna ögonen ordentligt. Idag står det ett nummer du aldrig sett förut.
+  `Öppning: SPEGELN. Morgon i badrummet. Compliance 892. Tur 0.
+Spegeln visar din hälsostatus — allt grönt. Sömnkvalitet 94%. Hjärtfrekvens normal.
+Du mår bra. Riktigt bra. Framtiden tar hand om dig.
+VIKTIGT: Börja utopiskt. Det dolda lagret: spegeln visade din status INNAN du
+öppnade ögonen. Den väntade redan. Eller: ett värde du aldrig bett om — "social
+kompatibilitet: 97%" — blinkar förbi och försvinner.
 Scentyp: SCEN (120–200 ord). Använd tre slag: förankring, vridning, krok.
-Fånga den intima övervakningens obehag — systemet vet mer om din kropp än du.`,
+Använd röstmarkeringar: en «ECHO: ...» interjektion (varm, hjälpsam vid 892 compliance).`,
 
-  `Öppning: GRANNEN. Trapphuset i Hammarby Sjöstad. Compliance 892.
-Grannen i 4B har inte synts på tre dagar. Hennes dörr har bytt färg — subtilt, nästan omärkbart.
+  `Öppning: GRANNEN. Trapphuset i Hammarby Sjöstad. Compliance 892. Tur 0.
+Du möter grannen i trapphuset. Hon ler. Trapphuset luktar rent. Allt är normalt.
+VIKTIGT: Helt normal, trevlig scen. Det dolda lagret: grannen bär nästan
+identiska kläder som igår. Eller: hennes leende är exakt likadant — samma
+muskelgrupper, samma timing. Som om det optimerats.
 Scentyp: SCEN (120–200 ord). Använd tre slag: förankring, vridning, krok.
-Fånga vardagens yta och antydningen att någon raderats ur systemet.`,
+Använd röstmarkeringar: en «ECHO: ...» interjektion (varm, hjälpsam vid 892 compliance).`,
 ];
 
 export async function GET() {
