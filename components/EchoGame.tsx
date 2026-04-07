@@ -546,16 +546,31 @@ function Journal({ flags, open, onToggle }: { flags: Record<string, boolean>; op
     other: "Övrigt",
   };
 
+  if (!open) return null;
+
   return (
-    <div style={{ marginBottom: "1rem" }}>
+    <div style={{ position: "fixed", inset: 0, zIndex: 200, display: "flex", flexDirection: "column" }} onClick={onToggle}>
       <div
-        onClick={onToggle}
-        style={{ display: "flex", justifyContent: "space-between", alignItems: "center", cursor: "pointer", padding: "0.4rem 0", fontSize: "11px", color: "var(--color-text-tertiary)", letterSpacing: "0.06em", textTransform: "uppercase" }}
+        onClick={(e) => e.stopPropagation()}
+        style={{
+          position: "absolute",
+          top: "60px",
+          left: "50%",
+          transform: "translateX(-50%)",
+          width: "min(90vw, 500px)",
+          maxHeight: "70vh",
+          overflowY: "auto",
+          background: "var(--color-background-primary)",
+          border: "1px solid var(--color-border-secondary)",
+          borderRadius: "4px",
+          padding: "1rem",
+          animation: "sceneFadeIn 0.2s ease-out both",
+        }}
       >
-        <span>Upptäckter {discovered.length > 0 ? `(${discovered.length})` : ""}</span>
-        <span style={{ transition: "transform 0.3s", transform: open ? "rotate(180deg)" : "rotate(0)" }}>&#9662;</span>
-      </div>
-      <div style={{ overflow: "hidden", maxHeight: open ? "600px" : "0px", opacity: open ? 1 : 0, transition: "max-height 0.4s ease, opacity 0.3s ease" }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.75rem", fontSize: "11px", color: "var(--color-text-tertiary)", letterSpacing: "0.06em", textTransform: "uppercase" }}>
+          <span>Upptäckter {discovered.length > 0 ? `(${discovered.length})` : ""}</span>
+          <span onClick={onToggle} style={{ cursor: "pointer", fontSize: "14px", color: "var(--color-text-tertiary)" }}>✕</span>
+        </div>
         {discovered.length === 0 ? (
           <div style={{ fontSize: "13px", fontFamily: "var(--font-mono, monospace)", color: "var(--color-text-tertiary)", padding: "0.5rem 0" }}>
             Inga upptäckter ännu. Utforska världen.
@@ -1160,8 +1175,29 @@ export default function EchoGame({ initialSave, onSave, onMenu, onStateChange }:
         {state?.flags && <Journal flags={state.flags} open={journalOpen} onToggle={() => setJournalOpen((v) => !v)} />}
 
         {mapOpen && (
-          <div style={{ marginBottom: "1rem", padding: "1rem", background: "var(--color-background-secondary)", borderRadius: "4px", animation: "sceneFadeIn 0.3s ease-out both" }}>
-            <MiniMap currentLocation={meta.location} compliance={meta.compliance} />
+          <div style={{ position: "fixed", inset: 0, zIndex: 200 }} onClick={() => setMapOpen(false)}>
+            <div
+              onClick={(e) => e.stopPropagation()}
+              style={{
+                position: "absolute",
+                top: "60px",
+                left: "50%",
+                transform: "translateX(-50%)",
+                width: "min(90vw, 500px)",
+                maxHeight: "70vh",
+                overflowY: "auto",
+                background: "var(--color-background-primary)",
+                border: "1px solid var(--color-border-secondary)",
+                borderRadius: "4px",
+                padding: "1rem",
+                animation: "sceneFadeIn 0.2s ease-out both",
+              }}
+            >
+              <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: "0.5rem" }}>
+                <span onClick={() => setMapOpen(false)} style={{ cursor: "pointer", fontSize: "14px", color: "var(--color-text-tertiary)" }}>✕</span>
+              </div>
+              <MiniMap currentLocation={meta.location} compliance={meta.compliance} />
+            </div>
           </div>
         )}
 
