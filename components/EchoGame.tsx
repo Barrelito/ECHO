@@ -780,75 +780,81 @@ export default function EchoGame({ initialSave, onSave, onMenu, onStateChange }:
   return (
     <div style={{ minHeight: "100vh", display: "flex", justifyContent: "center", padding: "1.5rem 1rem 3rem" }}>
       <div style={{ maxWidth: "680px", width: "100%" }}>
+        {/* Sticky header + HUD */}
         <div style={{
           position: "sticky",
           top: 0,
           zIndex: 10,
           background: "var(--color-background-primary)",
-          paddingTop: "0.5rem",
-          paddingBottom: "0.75rem",
-          borderBottom: "0.5px solid var(--color-border-tertiary)",
-          marginBottom: "1rem",
+          paddingTop: "0.75rem",
+          paddingBottom: "0.5rem",
+          marginBottom: "0.75rem",
         }}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-          <span style={{ fontSize: "18px", fontWeight: 400, fontFamily: "Georgia, serif", letterSpacing: "0.1em" }}>ECHO</span>
-          <div style={{ display: "flex", gap: "16px", alignItems: "center" }}>
-            <span
-              onClick={() => setJournalOpen((v) => !v)}
-              style={{ fontSize: "10px", color: journalOpen ? "var(--color-text-primary)" : "var(--color-text-tertiary)", cursor: "pointer", letterSpacing: "0.06em", transition: "color 0.2s" }}
-            >
-              JOURNAL
-            </span>
-            <span
-              onClick={() => setMapOpen((v) => !v)}
-              style={{ fontSize: "10px", color: mapOpen ? "var(--color-text-primary)" : "var(--color-text-tertiary)", cursor: "pointer", letterSpacing: "0.06em", transition: "color 0.2s" }}
-            >
-              KARTA
-            </span>
-            {onSave && (
+          {/* Top row: title + nav */}
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.5rem" }}>
+            <span style={{ fontSize: "18px", fontWeight: 400, fontFamily: "Georgia, serif", letterSpacing: "0.1em" }}>ECHO</span>
+            <div style={{ display: "flex", gap: "16px", alignItems: "center" }}>
               <span
-                onClick={isStreaming ? undefined : handleSave}
-                style={{ fontSize: "10px", color: "var(--color-text-tertiary)", cursor: isStreaming ? "default" : "pointer", letterSpacing: "0.06em", opacity: isStreaming ? 0.4 : 1, transition: "opacity 0.2s" }}
+                onClick={() => setJournalOpen((v) => !v)}
+                style={{ fontSize: "10px", color: journalOpen ? "var(--color-text-primary)" : "var(--color-text-tertiary)", cursor: "pointer", letterSpacing: "0.06em", transition: "color 0.2s" }}
               >
-                SPARA
+                JOURNAL
               </span>
-            )}
-            {onMenu && (
               <span
-                onClick={() => onMenu(hasUnsavedChanges)}
-                style={{ fontSize: "10px", color: "var(--color-text-tertiary)", cursor: "pointer", letterSpacing: "0.06em" }}
+                onClick={() => setMapOpen((v) => !v)}
+                style={{ fontSize: "10px", color: mapOpen ? "var(--color-text-primary)" : "var(--color-text-tertiary)", cursor: "pointer", letterSpacing: "0.06em", transition: "color 0.2s" }}
               >
-                MENY
+                KARTA
               </span>
-            )}
-            <span style={{ fontSize: "11px", color: "var(--color-text-tertiary)", letterSpacing: "0.08em", textTransform: "uppercase" }}>Tur {state?.turnCount ?? 0}</span>
-          </div>
-        </div>
-        </div>{/* end sticky header */}
-
-        <div
-          onClick={() => setHudExpanded((v) => !v)}
-          style={{ cursor: "pointer", overflow: "hidden", maxHeight: hudExpanded ? "200px" : "0px", opacity: hudExpanded ? 1 : 0, transition: "max-height 0.5s ease, opacity 0.4s ease", marginBottom: hudExpanded ? "0" : "0" }}
-        >
-          <ComplianceBar value={meta.compliance} />
-          <StatusRow meta={meta} />
-          {meta.inNeuralDive && (
-            <div style={{ background: "#EEEDFE", border: "0.5px solid #AFA9EC", borderRadius: "8px", padding: "0.6rem 1rem", fontSize: "12px", color: "#3C3489", marginBottom: "1rem", letterSpacing: "0.04em" }}>
-              ⬡ NEURAL DYKNING AKTIV — compliance sjunker vid förlängd exponering
+              {onSave && (
+                <span
+                  onClick={isStreaming ? undefined : handleSave}
+                  style={{ fontSize: "10px", color: "var(--color-text-tertiary)", cursor: isStreaming ? "default" : "pointer", letterSpacing: "0.06em", opacity: isStreaming ? 0.4 : 1, transition: "opacity 0.2s" }}
+                >
+                  SPARA
+                </span>
+              )}
+              {onMenu && (
+                <span
+                  onClick={() => onMenu(hasUnsavedChanges)}
+                  style={{ fontSize: "10px", color: "var(--color-text-tertiary)", cursor: "pointer", letterSpacing: "0.06em" }}
+                >
+                  MENY
+                </span>
+              )}
+              <span style={{ fontSize: "11px", color: "var(--color-text-tertiary)", letterSpacing: "0.08em", textTransform: "uppercase" }}>Tur {state?.turnCount ?? 0}</span>
             </div>
-          )}
-        </div>
-        {!hudExpanded && (
-          <div
-            onClick={() => setHudExpanded(true)}
-            style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "0.4rem 0", marginBottom: "0.75rem", cursor: "pointer", fontSize: "11px", color: "var(--color-text-tertiary)", letterSpacing: "0.06em", opacity: 0.6, transition: "opacity 0.2s" }}
-            onMouseEnter={(e) => (e.currentTarget.style.opacity = "1")}
-            onMouseLeave={(e) => (e.currentTarget.style.opacity = "0.6")}
-          >
-            <span>{meta.location} · {meta.time}</span>
-            <span style={{ color: meta.compliance >= 800 ? "#639922" : meta.compliance >= 400 ? "#BA7517" : "#E24B4A" }}>{meta.compliance}</span>
           </div>
-        )}
+
+          {/* Compact status line — always visible, clickable to expand */}
+          <div
+            onClick={() => setHudExpanded((v) => !v)}
+            style={{ cursor: "pointer", display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: "11px", color: "var(--color-text-tertiary)", letterSpacing: "0.04em", padding: "0.25rem 0" }}
+          >
+            <span>{meta.location} · {meta.time}{meta.inNeuralDive ? " · ⬡ Neural" : ""}</span>
+            <span style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+              <span style={{ color: complianceColor(meta.compliance), fontWeight: 500 }}>{meta.compliance}</span>
+              <span style={{ fontSize: "8px", transition: "transform 0.3s", transform: hudExpanded ? "rotate(180deg)" : "rotate(0)" }}>▾</span>
+            </span>
+          </div>
+
+          {/* Expandable HUD details */}
+          <div style={{
+            overflow: "hidden",
+            maxHeight: hudExpanded ? "200px" : "0px",
+            opacity: hudExpanded ? 1 : 0,
+            transition: "max-height 0.4s ease, opacity 0.3s ease",
+            marginTop: hudExpanded ? "0.5rem" : "0",
+          }}>
+            <ComplianceBar value={meta.compliance} />
+            <StatusRow meta={meta} />
+            {meta.inNeuralDive && (
+              <div style={{ background: "#EEEDFE", border: "0.5px solid #AFA9EC", borderRadius: "8px", padding: "0.6rem 1rem", fontSize: "12px", color: "#3C3489", marginBottom: "0.5rem", letterSpacing: "0.04em" }}>
+                ⬡ NEURAL DYKNING AKTIV — compliance sjunker vid förlängd exponering
+              </div>
+            )}
+          </div>
+        </div>
         {state?.flags && <Journal flags={state.flags} open={journalOpen} onToggle={() => setJournalOpen((v) => !v)} />}
 
         {mapOpen && (
