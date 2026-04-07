@@ -437,30 +437,22 @@ function EchoSystemVoice({ compliance }: { compliance: number }) {
 function EchoThinking({ message }: { message: string }) {
   return (
     <div style={{
-      padding: "2rem 2.25rem",
-      background: "var(--color-background-primary)",
-      border: "0.5px solid var(--color-border-tertiary)",
-      borderRadius: "12px",
-      marginBottom: "1.5rem",
-      minHeight: "120px",
+      padding: "1rem 0",
+      marginBottom: "1rem",
       display: "flex",
-      flexDirection: "column",
-      justifyContent: "center",
       alignItems: "center",
-      gap: "16px",
+      gap: "8px",
     }}>
-      <div style={{ display: "flex", gap: "6px", alignItems: "center" }}>
-        {[0, 1, 2].map((i) => (
-          <div key={i} style={{ width: "6px", height: "6px", borderRadius: "50%", background: "var(--color-text-tertiary)", animation: `pulse 1.4s ease-in-out ${i * 0.25}s infinite` }} />
-        ))}
-      </div>
-      <span style={{ fontSize: "11px", color: "var(--color-text-tertiary)", letterSpacing: "0.08em", fontFamily: "var(--font-mono, monospace)", textTransform: "uppercase", animation: "thinkingFade 1.8s ease-in-out infinite" }}>
-        {message}
+      <span style={{
+        display: "inline-block",
+        width: "8px",
+        height: "14px",
+        background: "var(--color-accent-green)",
+        animation: "typewriterCursor 1s step-end infinite",
+      }} />
+      <span style={{ fontSize: "12px", color: "var(--color-accent-green)", letterSpacing: "0.08em", fontFamily: "var(--font-mono, monospace)", textTransform: "uppercase" }}>
+        ECHO · {message}
       </span>
-      <style>{`
-        @keyframes pulse { 0%, 100% { opacity: 0.2; transform: scale(0.7); } 50% { opacity: 0.8; transform: scale(1); } }
-        @keyframes thinkingFade { 0%, 100% { opacity: 0.4; } 50% { opacity: 0.8; } }
-      `}</style>
     </div>
   );
 }
@@ -1013,8 +1005,8 @@ export default function EchoGame({ initialSave, onSave, onMenu, onStateChange }:
   const latestFragment = ambientFragments.length > 0 ? ambientFragments[ambientFragments.length - 1] : null;
 
   return (
-    <div style={{ minHeight: "100vh", display: "flex", justifyContent: "center", padding: isMobile ? "0.75rem 0.5rem 5rem" : "1.5rem 1rem 3rem" }}>
-      <div style={{ maxWidth: "680px", width: "100%" }}>
+    <div style={{ minHeight: "100vh", display: "flex", justifyContent: "center", padding: isMobile ? "0.75rem 0.5rem 5rem" : "2rem clamp(2rem, 8vw, 8rem) 3rem" }}>
+      <div style={{ maxWidth: "860px", width: "100%" }}>
         {/* Sticky header + HUD */}
         <div style={{
           position: "sticky",
@@ -1109,10 +1101,10 @@ export default function EchoGame({ initialSave, onSave, onMenu, onStateChange }:
               <div key={i} style={{ marginBottom: "0.75rem" }}>
                 {past.playerAction && (
                   <div style={{ fontSize: "12px", color: "var(--color-text-tertiary)", fontFamily: "var(--font-mono, monospace)", letterSpacing: "0.04em", marginBottom: "0.4rem", paddingLeft: "0.5rem", borderLeft: "2px solid var(--color-border-tertiary)" }}>
-                    {past.playerAction}
+                    <span style={{ color: "var(--color-accent-green)" }}>&gt; </span>{past.playerAction}
                   </div>
                 )}
-                <div style={{ background: "var(--color-background-primary)", border: "0.5px solid var(--color-border-tertiary)", borderRadius: "12px", padding: "1.25rem 1.5rem", opacity: 0.5 }}>
+                <div style={{ borderTop: "1px solid var(--color-border-tertiary)", padding: "1rem 0", opacity: 0.35 }}>
                   <SceneText text={past.text} streaming={false} dimmed compliance={meta.compliance} />
                 </div>
               </div>
@@ -1122,14 +1114,14 @@ export default function EchoGame({ initialSave, onSave, onMenu, onStateChange }:
 
         {/* Streaming: show text as it arrives */}
         {isStreaming && !isThinking && streamingText && (
-          <div style={{ background: "var(--color-background-primary)", border: "0.5px solid var(--color-border-tertiary)", borderRadius: isMobile ? "8px" : "12px", padding: isMobile ? "1.25rem 1rem" : "2rem 2.25rem", marginBottom: "1.5rem" }}>
+          <div style={{ borderTop: "1px solid var(--color-border-secondary)", padding: "1rem 0", marginBottom: "1.5rem" }}>
             <SceneText text={streamingText} streaming={true} compliance={meta.compliance} />
           </div>
         )}
 
         {/* Current scene: show after streaming is complete */}
         {!isStreaming && scene && (
-          <div style={{ background: "var(--color-background-primary)", border: "0.5px solid var(--color-border-tertiary)", borderRadius: isMobile ? "8px" : "12px", padding: isMobile ? "1.25rem 1rem" : "2rem 2.25rem", marginBottom: "1.5rem" }}>
+          <div style={{ borderTop: "1px solid var(--color-border-secondary)", padding: "1rem 0", marginBottom: "1.5rem" }}>
             <SceneText text={scene} streaming={false} compliance={meta.compliance} skipAnimation={justStreamed} />
           </div>
         )}
@@ -1157,17 +1149,14 @@ export default function EchoGame({ initialSave, onSave, onMenu, onStateChange }:
           </div>
         )}
 
-        <div className={isMobile ? "echo-input-bar" : ""} style={{ display: "flex", gap: "8px", opacity: isStreaming ? 0.5 : 1, transition: "opacity 0.4s", pointerEvents: isStreaming ? "none" : "auto" }}>
+        <div className={isMobile ? "echo-input-bar" : ""} style={{ display: "flex", alignItems: "center", gap: "8px", opacity: isStreaming ? 0.5 : 1, transition: "opacity 0.4s", pointerEvents: isStreaming ? "none" : "auto" }}>
+          <span style={{ color: "var(--color-accent-teal)", fontSize: "15px", fontWeight: 500 }}>&gt;</span>
           <input value={input}
             onChange={(e) => { setInput(e.target.value); if (e.target.value) setAmbientPaused(true); else setAmbientPaused(false); }}
             onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendInput(); } }}
             placeholder={isStreaming ? "ECHO skriver..." : meta.sceneType === "puls" ? "..." : meta.sceneType === "andning" ? "Du tänker på..." : "Vad gör du?"}
             disabled={isStreaming}
-            style={{ flex: 1, padding: isMobile ? "14px 14px" : "12px 16px", fontSize: "16px", border: "0.5px solid var(--color-border-secondary)", borderRadius: "8px", background: "var(--color-background-primary)", color: "var(--color-text-primary)", outline: "none" }} />
-          <button onClick={() => sendInput()} disabled={isStreaming || !input.trim()}
-            style={{ padding: isMobile ? "14px 18px" : "12px 20px", fontSize: "16px", border: "0.5px solid var(--color-border-secondary)", borderRadius: "8px", background: "transparent", color: "var(--color-text-primary)", cursor: isStreaming || !input.trim() ? "not-allowed" : "pointer", opacity: isStreaming || !input.trim() ? 0.4 : 1, transition: "opacity 0.3s", minHeight: "44px" }}>
-            →
-          </button>
+            style={{ flex: 1, padding: "10px 0", fontSize: isMobile ? "16px" : "14px", border: "none", borderBottom: "1px solid var(--color-accent-teal)", borderRadius: 0, background: "transparent", color: "var(--color-accent-green)", caretColor: "var(--color-accent-green)", outline: "none", fontFamily: "inherit", letterSpacing: "0.02em" }} />
         </div>
         <div ref={bottomRef} />
 
