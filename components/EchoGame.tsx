@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef, useCallback } from "react";
-import type { GameState, GameMessage, Meta, SaveData } from "@/lib/types";
+import type { GameState, GameMessage, Meta, SaveData, PressureData } from "@/lib/types";
 
 function useIsMobile() {
   const [isMobile, setIsMobile] = useState(false);
@@ -730,6 +730,12 @@ export interface EchoGameProps {
   onStateChange?: (state: GameState, history: GameMessage[], scene: string) => void;
 }
 
+function formatTime(seconds: number): string {
+  const m = Math.floor(seconds / 60);
+  const s = seconds % 60;
+  return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+}
+
 export default function EchoGame({ initialSave, onSave, onMenu, onStateChange }: EchoGameProps) {
   const isMobile = useIsMobile();
   const [scene, setScene] = useState(initialSave?.scene ?? "");
@@ -779,6 +785,12 @@ export default function EchoGame({ initialSave, onSave, onMenu, onStateChange }:
   const ambientPausedRef = useRef(false);
   const ambientStoppedRef = useRef(false);
   const stateRef = useRef(state);
+
+  // Pressure timer state
+  const [pressureTimer, setPressureTimer] = useState<number | null>(null);
+  const [pressureData, setPressureData] = useState<PressureData | null>(null);
+  const pressureIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const pressureDeadlineRef = useRef<number | null>(null);
   const sceneRef = useRef(scene);
   stateRef.current = state;
   sceneRef.current = scene;
@@ -893,6 +905,42 @@ export default function EchoGame({ initialSave, onSave, onMenu, onStateChange }:
     return () => stopAmbient();
   }, []);
 
+  function clearPressure() {
+    if (pressureIntervalRef.current) {
+      clearInterval(pressureIntervalRef.current);
+      pressureIntervalRef.current = null;
+    }
+    pressureDeadlineRef.current = null;
+    setPressureTimer(null);
+    setPressureData(null);
+  }
+
+  useEffect(() => {
+    return () => {
+      if (pressureIntervalRef.current) clearInterval(pressureIntervalRef.current);
+    };
+  }, []);
+
+  function startPressureTimer(pressure: PressureData) {
+    clearPressure();
+    setPressureData(pressure);
+    setPressureTimer(pressure.seconds);
+    pressureDeadlineRef.current = Date.now() + pressure.seconds * 1000;
+
+    pressureIntervalRef.current = setInterval(() => {
+      if (!pressureDeadlineRef.current) return;
+      const remaining = Math.ceil((pressureDeadlineRef.current - Date.now()) / 1000);
+      if (remaining <= 0) {
+        clearPressure();
+        // Auto-submit timeout
+        const consequence = pressure.consequence;
+        sendInput(`[INGEN REAKTION] Tiden rann ut. ${consequence}. Beskriv vad som händer härnäst.`);
+      } else {
+        setPressureTimer(remaining);
+      }
+    }, 250);
+  }
+
   const handleSave = useCallback(() => {
     if (!state || !onSave) return;
     onSave(state, history, scene, initialSave?.id);
@@ -940,6 +988,9 @@ export default function EchoGame({ initialSave, onSave, onMenu, onStateChange }:
         setComplianceDelta(newMeta.complianceDelta ?? 0);
         if (newMeta.newFlags?.length) setDiscoveryQueue(prev => [...prev, ...newMeta.newFlags!]);
         onStateChange?.(newState, [], accumulated);
+        if (newMeta.pressure) {
+          startPressureTimer(newMeta.pressure);
+        }
       });
     } catch { setScene("Systemfel. ECHO svarar inte."); }
     finally { setIsThinking(false); setIsStreaming(false); setHudExpanded(true); startAmbient(); }
@@ -948,6 +999,7 @@ export default function EchoGame({ initialSave, onSave, onMenu, onStateChange }:
   async function sendInput(overrideText?: string) {
     const playerText = (overrideText ?? input).trim();
     if (!playerText || isStreaming || !state) return;
+    clearPressure();
     setInput("");
     if (showOnboarding) { setShowOnboarding(false); if (typeof window !== "undefined") localStorage.setItem("echo_onboarded", "1"); }
 
@@ -989,6 +1041,9 @@ export default function EchoGame({ initialSave, onSave, onMenu, onStateChange }:
         setComplianceDelta(newMeta.complianceDelta ?? 0);
         if (newMeta.newFlags?.length) setDiscoveryQueue(prev => [...prev, ...newMeta.newFlags!]);
         onStateChange?.(newState, newHistory, accumulated);
+        if (newMeta.pressure) {
+          startPressureTimer(newMeta.pressure);
+        }
       });
     } catch { setScene("Systemfel. ECHO svarar inte."); setAmbientFragments([]); setAmbientDimmed(false); }
     finally { setIsThinking(false); setIsStreaming(false); setHudExpanded(true); startAmbient(); }
@@ -1134,6 +1189,29 @@ export default function EchoGame({ initialSave, onSave, onMenu, onStateChange }:
           </div>
         )}
 
+        {/* Pressure timer */}
+        {pressureData && pressureTimer !== null && (
+          <div
+            role="timer"
+            aria-live="assertive"
+            style={{
+              fontSize: "13px",
+              color: "var(--color-accent-red)",
+              textShadow: "0 0 8px rgba(255,34,68,0.4)",
+              fontFamily: "var(--font-mono, monospace)",
+              marginTop: "-0.5rem",
+              marginBottom: "1rem",
+              animation: pressureTimer <= 10 ? "pulse 1s ease-in-out infinite" : "none",
+            }}
+          >
+            <span style={{ color: "var(--color-text-tertiary)" }}>&gt;</span>
+            {" "}{pressureData.label}{" "}
+            <span style={{ fontSize: "18px", fontWeight: 600 }}>
+              {formatTime(pressureTimer)}
+            </span>
+          </div>
+        )}
+
         {!isStreaming && hints.length > 0 && (
           <ActionHints hints={hints} onSelect={(hint) => sendInput(hint)} />
         )}
@@ -1173,7 +1251,7 @@ export default function EchoGame({ initialSave, onSave, onMenu, onStateChange }:
             onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendInput(); } }}
             placeholder={isStreaming ? "ECHO skriver..." : meta.sceneType === "puls" ? "..." : meta.sceneType === "andning" ? "Du tänker på..." : "Vad gör du?"}
             disabled={isStreaming}
-            style={{ flex: 1, padding: "10px 0", fontSize: isMobile ? "16px" : "14px", border: "none", borderBottom: "1px solid var(--color-accent-teal)", borderRadius: 0, background: "transparent", color: "var(--color-accent-green)", caretColor: "var(--color-accent-green)", outline: "none", fontFamily: "inherit", letterSpacing: "0.02em" }} />
+            style={{ flex: 1, padding: "10px 0", fontSize: isMobile ? "16px" : "14px", border: "none", borderBottom: `1px solid ${pressureData ? "var(--color-accent-red)" : "var(--color-accent-teal)"}`, borderRadius: 0, background: "transparent", color: "var(--color-accent-green)", caretColor: "var(--color-accent-green)", outline: "none", fontFamily: "inherit", letterSpacing: "0.02em" }} />
         </div>
         <div ref={bottomRef} />
 
