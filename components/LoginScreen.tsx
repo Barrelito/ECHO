@@ -12,7 +12,7 @@ export default function LoginScreen({ onLogin, onGuest }: LoginScreenProps) {
         <div style={{ fontSize: "11px", letterSpacing: "0.2em", color: "var(--color-text-tertiary)", textTransform: "uppercase", marginBottom: "1rem" }}>
           SYSTEMSTATUS: VAKEN
         </div>
-        <h1 style={{ fontSize: "52px", fontWeight: 400, fontFamily: "Georgia, serif", marginBottom: "0.5rem", letterSpacing: "0.1em" }}>
+        <h1 style={{ fontFamily: "var(--font-mono, monospace)", fontSize: "28px", fontWeight: 400, color: "var(--color-accent-green)", marginBottom: "0.5rem", letterSpacing: "0.3em", textShadow: "0 0 12px rgba(0,255,136,0.5)" }}>
           ECHO
         </h1>
         <p style={{ fontSize: "15px", color: "var(--color-text-secondary)", lineHeight: "1.75", marginBottom: "2.5rem" }}>
@@ -23,15 +23,15 @@ export default function LoginScreen({ onLogin, onGuest }: LoginScreenProps) {
         <div style={{ display: "flex", gap: "12px", justifyContent: "center" }}>
           <button
             onClick={onLogin}
-            style={{ padding: "12px 28px", fontSize: "13px", fontWeight: 500, border: "0.5px solid var(--color-border-secondary)", borderRadius: "8px", background: "transparent", color: "var(--color-text-primary)", cursor: "pointer", letterSpacing: "0.1em", textTransform: "uppercase" }}
+            style={{ padding: "12px 28px", fontSize: "13px", fontWeight: 500, borderRadius: "2px", fontFamily: "var(--font-mono, monospace)", border: "1px solid var(--color-accent-teal)", background: "transparent", color: "var(--color-accent-teal)", cursor: "pointer", letterSpacing: "0.06em", textTransform: "uppercase" }}
           >
-            Logga in
+            {">"} Logga in
           </button>
           <button
             onClick={onGuest}
-            style={{ padding: "12px 28px", fontSize: "13px", fontWeight: 500, border: "0.5px solid var(--color-border-tertiary)", borderRadius: "8px", background: "transparent", color: "var(--color-text-tertiary)", cursor: "pointer", letterSpacing: "0.1em", textTransform: "uppercase" }}
+            style={{ padding: "12px 28px", fontSize: "13px", fontWeight: 500, borderRadius: "2px", fontFamily: "var(--font-mono, monospace)", border: "1px solid var(--color-accent-teal)", background: "transparent", color: "var(--color-accent-teal)", cursor: "pointer", letterSpacing: "0.06em", textTransform: "uppercase", opacity: 0.65 }}
           >
-            Spela som gäst
+            {">"} Spela som gäst
           </button>
         </div>
       </div>
