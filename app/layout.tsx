@@ -1,6 +1,13 @@
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import AuthProvider from "@/components/AuthProvider";
+import { IBM_Plex_Mono } from 'next/font/google';
+
+const plexMono = IBM_Plex_Mono({
+  subsets: ['latin'],
+  weight: ['300', '400', '500', '600'],
+  variable: '--font-mono',
+});
 
 export const viewport: Viewport = {
   width: "device-width",
@@ -19,7 +26,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="sv">
+    <html lang="sv" className={plexMono.variable}>
       <body>
         <AuthProvider>{children}</AuthProvider>
       </body>
