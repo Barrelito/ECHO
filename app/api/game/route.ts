@@ -50,6 +50,8 @@ interface AIStateBlock {
   flags?: Record<string, boolean>;
   hints?: string[];
   ambientHook?: string;
+  pressure?: { seconds: number; label: string; consequence: string };
+  gameOver?: boolean;
 }
 
 function parseStructuredResponse(fullText: string): { sceneText: string; stateBlock: AIStateBlock | null } {
@@ -171,6 +173,8 @@ export async function POST(req: NextRequest) {
                 sceneType: stateBlock?.sceneType ?? "scen",
                 ambientHook: stateBlock?.ambientHook,
                 newFlags: stateBlock?.flags ? Object.keys(stateBlock.flags).filter(k => stateBlock.flags![k] && !state.flags[k]) : [],
+                pressure: stateBlock?.pressure ?? null,
+                gameOver: stateBlock?.gameOver ?? false,
               },
             })}\n\n`
           )
@@ -287,6 +291,8 @@ export async function GET() {
                 hints: stateBlock?.hints ?? [],
                 sceneType: stateBlock?.sceneType ?? "scen",
                 ambientHook: stateBlock?.ambientHook,
+                pressure: stateBlock?.pressure ?? null,
+                gameOver: stateBlock?.gameOver ?? false,
               },
             })}\n\n`
           )

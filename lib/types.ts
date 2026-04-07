@@ -25,6 +25,12 @@ export interface GameRequest {
   recentAmbientFragments?: string[];
 }
 
+export interface PressureData {
+  seconds: number;
+  label: string;
+  consequence: string;
+}
+
 export interface Meta {
   location: string;
   time: string;
@@ -36,6 +42,8 @@ export interface Meta {
   sceneType?: SceneType;
   ambientHook?: string;
   newFlags?: string[];
+  pressure?: PressureData | null;
+  gameOver?: boolean;
 }
 
 export interface SaveData {
