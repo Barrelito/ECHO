@@ -217,18 +217,24 @@ function VoiceSegmentRenderer({ segment, compliance }: { segment: VoiceSegment; 
         borderLeft: `2px solid ${echoColor}`,
         margin: "0.5em 0",
         opacity: 0.85,
+        textShadow: "0 0 4px rgba(0,255,136,0.4)",
+        background: "rgba(0,255,136,0.03)",
       }}>
         {segment.text}
       </div>
     );
   }
   if (segment.type === "thought") {
-    return <span style={{ fontStyle: "italic", color: "var(--color-text-secondary)" }}>{segment.text}</span>;
+    return (
+      <span style={{ fontStyle: "italic", color: "var(--color-text-secondary)", opacity: 0.7 }}>
+        <span style={{ color: "var(--color-text-tertiary)", fontStyle: "normal" }}>{"// "}</span>{segment.text}
+      </span>
+    );
   }
   if (segment.type === "dialog") {
     return (
-      <span>
-        <span style={{ fontVariant: "small-caps", fontSize: "0.85em", color: "var(--color-text-tertiary)", marginRight: "0.4em" }}>{segment.name}</span>
+      <span style={{ borderLeft: "2px solid var(--color-accent-teal)", paddingLeft: "0.75rem", display: "inline-block", margin: "0.3em 0" }}>
+        <span style={{ fontVariant: "small-caps", fontSize: "0.85em", color: "var(--color-accent-teal)", marginRight: "0.4em" }}>{segment.name}</span>
         <span style={{ fontWeight: 500 }}>&ldquo;{segment.text}&rdquo;</span>
       </span>
     );
@@ -263,7 +269,7 @@ function SceneText({ text, streaming, dimmed, compliance = 892, skipAnimation }:
     ? [paragraphs[0], "…", paragraphs[paragraphs.length - 1]]
     : paragraphs;
   return (
-    <div style={{ fontFamily: "Georgia, 'Times New Roman', serif", fontSize: dimmed ? "15px" : "17px", lineHeight: "1.9", color: dimmed ? "var(--color-text-tertiary)" : "var(--color-text-primary)", marginBottom: "0.5rem", transition: "color 0.3s" }}>
+    <div style={{ fontFamily: "var(--font-mono, monospace)", fontSize: "15px", lineHeight: 1.75, letterSpacing: "0.02em", color: dimmed ? "var(--color-text-tertiary)" : "var(--color-text-primary)", marginBottom: "0.5rem", transition: "color 0.3s" }}>
       {displayParagraphs.map((p, i) =>
         p === "…" ? (
           <p key={i} style={{ margin: "0 0 1.1em 0", textAlign: "center", color: "var(--color-text-tertiary)" }}>…</p>
@@ -276,9 +282,8 @@ function SceneText({ text, streaming, dimmed, compliance = 892, skipAnimation }:
           </div>
         )
       )}
-      {streaming && <span style={{ display: "inline-block", width: "2px", height: "1.1em", background: "var(--color-text-tertiary)", marginLeft: "2px", verticalAlign: "text-bottom", animation: "blink 1s step-end infinite" }} />}
+      {streaming && <span style={{ display: "inline-block", width: "8px", height: "1.1em", background: "var(--color-accent-green)", marginLeft: "2px", verticalAlign: "text-bottom", animation: "typewriterCursor 1s step-end infinite" }} />}
       <style>{`
-        @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0} }
         @keyframes sceneFadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
       `}</style>
     </div>
