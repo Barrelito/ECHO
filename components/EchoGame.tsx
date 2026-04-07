@@ -359,8 +359,7 @@ function ActionHints({ hints, onSelect }: { hints: string[]; onSelect: (hint: st
           style={{
             padding: "6px 0 6px 12px",
             fontSize: "14px",
-            fontFamily: "Georgia, serif",
-            fontStyle: "italic",
+            fontFamily: "var(--font-mono, monospace)",
             color: "var(--color-text-secondary)",
             background: "transparent",
             border: "none",
@@ -370,10 +369,10 @@ function ActionHints({ hints, onSelect }: { hints: string[]; onSelect: (hint: st
             animation: `sceneFadeIn 0.5s ease-out ${i * 0.3}s both`,
             textAlign: "left",
           }}
-          onMouseEnter={(e) => { e.currentTarget.style.color = "var(--color-text-primary)"; e.currentTarget.style.borderLeftColor = "var(--color-text-secondary)"; }}
-          onMouseLeave={(e) => { e.currentTarget.style.color = "var(--color-text-secondary)"; e.currentTarget.style.borderLeftColor = "var(--color-border-tertiary)"; }}
+          onMouseEnter={(e) => { e.currentTarget.style.color = "var(--color-text-primary)"; e.currentTarget.style.textShadow = "0 0 4px rgba(0,204,170,0.3)"; }}
+          onMouseLeave={(e) => { e.currentTarget.style.color = "var(--color-text-secondary)"; e.currentTarget.style.textShadow = "none"; }}
         >
-          — {hint}
+          <span style={{ color: "var(--color-accent-teal)" }}>&gt;</span> {hint}
         </button>
       ))}
     </div>
@@ -555,7 +554,7 @@ function Journal({ flags, open, onToggle }: { flags: Record<string, boolean>; op
       </div>
       <div style={{ overflow: "hidden", maxHeight: open ? "600px" : "0px", opacity: open ? 1 : 0, transition: "max-height 0.4s ease, opacity 0.3s ease" }}>
         {discovered.length === 0 ? (
-          <div style={{ fontSize: "13px", fontFamily: "Georgia, serif", color: "var(--color-text-tertiary)", fontStyle: "italic", padding: "0.5rem 0" }}>
+          <div style={{ fontSize: "13px", fontFamily: "var(--font-mono, monospace)", color: "var(--color-text-tertiary)", padding: "0.5rem 0" }}>
             Inga upptäckter ännu. Utforska världen.
           </div>
         ) : (
@@ -563,25 +562,27 @@ function Journal({ flags, open, onToggle }: { flags: Record<string, boolean>; op
             {categoryOrder.filter(cat => grouped[cat]?.length).map((cat) => (
               <div key={cat} style={{ marginBottom: "0.75rem" }}>
                 <div style={{
-                  fontSize: "9px",
+                  fontSize: "11px",
                   color: "var(--color-text-tertiary)",
-                  letterSpacing: "0.1em",
-                  textTransform: "uppercase",
+                  letterSpacing: "0.06em",
                   marginBottom: "0.3rem",
                   paddingLeft: "0.75rem",
+                  fontFamily: "var(--font-mono, monospace)",
                 }}>
-                  {categoryLabels[cat]}
+                  {"// "}{categoryLabels[cat].toUpperCase()}
                 </div>
                 {grouped[cat].map((key) => (
                   <div key={key} style={{
-                    fontSize: "13px",
-                    fontFamily: "Georgia, serif",
+                    fontSize: "12px",
+                    fontFamily: "var(--font-mono, monospace)",
                     color: "var(--color-text-secondary)",
                     padding: "0.35rem 0 0.35rem 0.75rem",
-                    borderLeft: `2px solid ${cat === "secrets" ? "#BA7517" : cat === "characters" ? "var(--color-text-tertiary)" : "var(--color-border-tertiary)"}`,
                     marginBottom: "0.4rem",
                     animation: "sceneFadeIn 0.4s ease-out both",
                   }}>
+                    <span style={{ color: cat === "characters" ? "var(--color-accent-teal)" : cat === "places" ? "var(--color-accent-amber)" : "var(--color-accent-red)", marginRight: "0.5rem" }}>
+                      {cat === "characters" ? "[K]" : cat === "places" ? "[P]" : "[H]"}
+                    </span>
                     {FLAG_LABELS[key] || formatFlagKey(key)}
                   </div>
                 ))}
@@ -1138,17 +1139,26 @@ export default function EchoGame({ initialSave, onSave, onMenu, onStateChange }:
 
         {latestFragment && (
           <div key={latestFragment.id} style={{
-            marginBottom: "1rem",
-            opacity: ambientDimmed ? 0.3 : 0.7,
+            ...(isMobile ? {
+              marginBottom: "1rem",
+            } : {
+              position: "fixed" as const,
+              bottom: "120px",
+              right: "2rem",
+              maxWidth: "280px",
+              zIndex: 5,
+            }),
+            opacity: ambientDimmed ? 0.2 : 0.4,
             transition: "opacity 0.5s",
-            fontSize: "13px",
-            fontFamily: "Georgia, serif",
+            fontSize: "11px",
+            fontFamily: "var(--font-mono, monospace)",
             color: "var(--color-text-tertiary)",
             lineHeight: "1.7",
             padding: "0.4rem 0",
             animation: "ambientReplace 1.2s ease-in-out",
             borderLeft: latestFragment.actionable ? "2px solid var(--color-text-tertiary)" : "none",
             paddingLeft: latestFragment.actionable ? "0.75rem" : "0",
+            textShadow: "0 0 2px rgba(0,255,136,0.1)",
           }}>
             {latestFragment.text}
             <style>{`@keyframes ambientReplace { 0% { opacity: 0; } 15% { opacity: 0; } 100% { opacity: 1; } }`}</style>
