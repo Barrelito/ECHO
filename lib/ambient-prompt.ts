@@ -7,6 +7,7 @@ REGLER:
 - Aldrig dialog, aldrig val, aldrig direkt tilltal
 - Sensoriska detaljer: ljud, ljus, rörelse, temperatur, lukt
 - Variera: människor, systemmeddelanden, väder, transport, teknik, djur
+- Om en STÄMNINGSFRAS finns, spinn vidare på den — bygg atmosfär kring det temat
 
 PLATSENS TON:
 - Hammarby Sjöstad: Steril perfektion, subtilt obehag under ytan
@@ -16,6 +17,11 @@ PLATSENS TON:
 - Kista Skrotgård: Skrammel, desperation, improviserad teknik
 - The Apex: Kylig lyx, allt fungerar, allt är övervakat
 - Serverhall Noll: Arton grader, mörker som andas, maskinellt surr
+
+SCENTYP-ANPASSNING:
+- Om SCENTYP är "puls": Fragmentet ska vara kort och oroande. Max 15 ord. Något är fel.
+- Om SCENTYP är "scen": Fragmentet ska bygga atmosfär. 20-40 ord. Detaljer som fördjupar.
+- Om SCENTYP är "andning": Fragmentet ska vara sensoriskt rikt, långsamt. 25-40 ord. Världen vilar.
 
 ACTIONABLE (ca 1 av 5 gånger):
 Om fragmentet innehåller något ovanligt som spelaren KAN reagera på —

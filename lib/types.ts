@@ -1,3 +1,5 @@
+export type SceneType = "puls" | "scen" | "andning";
+
 export interface GameState {
   compliance: number;
   location: string;
@@ -7,6 +9,8 @@ export interface GameState {
   echoAwareness: "low" | "medium" | "high";
   flags: Record<string, boolean>;
   turnCount: number;
+  sceneType?: SceneType;
+  ambientHook?: string;
 }
 
 export interface GameMessage {
@@ -28,6 +32,8 @@ export interface Meta {
   inNeuralDive: boolean;
   echoAwareness: string;
   hints?: string[];
+  sceneType?: SceneType;
+  ambientHook?: string;
 }
 
 export interface SaveData {
@@ -44,6 +50,8 @@ export interface SaveData {
 export interface AmbientRequest {
   state: GameState;
   lastSceneSummary: string;
+  ambientHook?: string;
+  sceneType?: SceneType;
 }
 
 export interface AmbientEvent {

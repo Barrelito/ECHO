@@ -6,7 +6,7 @@ import type { AmbientRequest, AmbientEvent } from "@/lib/types";
 const client = new Anthropic();
 
 function buildAmbientContext(req: AmbientRequest): string {
-  const { state, lastSceneSummary } = req;
+  const { state, lastSceneSummary, ambientHook, sceneType } = req;
   const flags = Object.entries(state.flags)
     .filter(([, v]) => v)
     .map(([k]) => k)
@@ -18,7 +18,9 @@ COMPLIANCE: ${state.compliance}
 FRAKTION: ${state.faction}
 NEURAL DYKNING: ${state.inNeuralDive ? "AKTIV" : "Inaktiv"}
 FLAGGOR: ${flags || "Inga"}
-SENASTE SCEN: ${lastSceneSummary}`;
+SCENTYP: ${sceneType ?? "scen"}
+SENASTE SCEN: ${lastSceneSummary}
+STÄMNINGSFRAS: ${ambientHook ?? "ingen"}`;
 }
 
 export async function POST(req: NextRequest) {

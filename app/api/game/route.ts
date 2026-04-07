@@ -1,7 +1,7 @@
 import { NextRequest } from "next/server";
 import Anthropic from "@anthropic-ai/sdk";
 import { ECHO_SYSTEM_PROMPT } from "@/lib/echo-prompt";
-import type { GameState, GameMessage, GameRequest } from "@/lib/types";
+import type { GameState, GameMessage, GameRequest, SceneType } from "@/lib/types";
 
 const client = new Anthropic();
 
@@ -27,6 +27,7 @@ FRAKTION: ${state.faction}
 NEURAL DYKNING: ${state.inNeuralDive ? "AKTIV" : "Inaktiv"}
 ECHO MEDVETENHET: ${state.echoAwareness}
 TUR: ${state.turnCount}
+FÖREGÅENDE SCENTYP: ${state.sceneType ?? "ingen"}
 
 NARRATIVA FLAGGOR:
 ${
@@ -39,6 +40,7 @@ ${
 }
 
 interface AIStateBlock {
+  sceneType?: SceneType;
   location?: string;
   time?: string;
   compliance?: number;
@@ -47,6 +49,7 @@ interface AIStateBlock {
   echoAwareness?: "low" | "medium" | "high";
   flags?: Record<string, boolean>;
   hints?: string[];
+  ambientHook?: string;
 }
 
 function parseStructuredResponse(fullText: string): { sceneText: string; stateBlock: AIStateBlock | null } {
@@ -84,6 +87,8 @@ function applyStateBlock(
     if (block.flags) {
       newState.flags = { ...newState.flags, ...block.flags };
     }
+    if (block.sceneType) newState.sceneType = block.sceneType;
+    if (block.ambientHook) newState.ambientHook = block.ambientHook;
   }
 
   return newState;
@@ -122,7 +127,7 @@ export async function POST(req: NextRequest) {
 
   const stream = client.messages.stream({
     model: "claude-opus-4-5",
-    max_tokens: 512,
+    max_tokens: 768,
     system: ECHO_SYSTEM_PROMPT,
     messages,
   });
@@ -162,6 +167,8 @@ export async function POST(req: NextRequest) {
                 inNeuralDive: updatedState.inNeuralDive,
                 echoAwareness: updatedState.echoAwareness,
                 hints: stateBlock?.hints ?? [],
+                sceneType: stateBlock?.sceneType ?? "scen",
+                ambientHook: stateBlock?.ambientHook,
               },
             })}\n\n`
           )
@@ -186,19 +193,23 @@ export async function POST(req: NextRequest) {
 const OPENING_SCENARIOS = [
   `Öppning: KAFFET. Morgon i Hammarby Sjöstad. Compliance 892.
 Kaffet smakar annorlunda idag — inte dåligt, men annorlunda. ECHO har justerat receptet.
-Max 120 ord, korta stycken. Fånga den perfekta världen och det nästan omärkbara obehaget under ytan.`,
+Scentyp: SCEN (120–200 ord). Använd tre slag: förankring, vridning, krok.
+Fånga den perfekta världen och det nästan omärkbara obehaget under ytan.`,
 
   `Öppning: KAPSELN. Morgonpendel genom tunneln. Compliance 892.
 Transportkapseln stannar 0.3 sekunder för länge vid Gullmarsplan. Ingen annan verkar märka det.
-Max 120 ord, korta stycken. Fånga rutinens perfektion och den lilla glitchen som bryter mönstret.`,
+Scentyp: SCEN (120–200 ord). Använd tre slag: förankring, vridning, krok.
+Fånga rutinens perfektion och den lilla glitchen som bryter mönstret.`,
 
   `Öppning: SPEGELN. Morgon i badrummet. Compliance 892.
 Din spegel visar din hälsostatus innan du hunnit öppna ögonen ordentligt. Idag står det ett nummer du aldrig sett förut.
-Max 120 ord, korta stycken. Fånga den intima övervakningens obehag — systemet vet mer om din kropp än du.`,
+Scentyp: SCEN (120–200 ord). Använd tre slag: förankring, vridning, krok.
+Fånga den intima övervakningens obehag — systemet vet mer om din kropp än du.`,
 
   `Öppning: GRANNEN. Trapphuset i Hammarby Sjöstad. Compliance 892.
 Grannen i 4B har inte synts på tre dagar. Hennes dörr har bytt färg — subtilt, nästan omärkbart.
-Max 120 ord, korta stycken. Fånga vardagens yta och antydningen att någon raderats ur systemet.`,
+Scentyp: SCEN (120–200 ord). Använd tre slag: förankring, vridning, krok.
+Fånga vardagens yta och antydningen att någon raderats ur systemet.`,
 ];
 
 export async function GET() {
@@ -209,7 +220,7 @@ export async function GET() {
 
   const stream = client.messages.stream({
     model: "claude-opus-4-5",
-    max_tokens: 512,
+    max_tokens: 768,
     system: ECHO_SYSTEM_PROMPT,
     messages: [
       {
@@ -256,6 +267,8 @@ export async function GET() {
                 inNeuralDive: false,
                 echoAwareness: "low",
                 hints: stateBlock?.hints ?? [],
+                sceneType: stateBlock?.sceneType ?? "scen",
+                ambientHook: stateBlock?.ambientHook,
               },
             })}\n\n`
           )

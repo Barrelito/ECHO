@@ -71,13 +71,20 @@ function cleanSceneText(text: string): string {
 function SceneText({ text, streaming, dimmed }: { text: string; streaming: boolean; dimmed?: boolean }) {
   const cleaned = cleanSceneText(text);
   const paragraphs = cleaned.split("\n").filter((l) => l.trim());
+  // For dimmed (past) scenes with many paragraphs, show first and last with ellipsis
+  const truncated = dimmed && paragraphs.length > 3;
+  const displayParagraphs = truncated
+    ? [paragraphs[0], "…", paragraphs[paragraphs.length - 1]]
+    : paragraphs;
   return (
     <div style={{ fontFamily: "Georgia, 'Times New Roman', serif", fontSize: dimmed ? "15px" : "17px", lineHeight: "1.9", color: dimmed ? "var(--color-text-tertiary)" : "var(--color-text-primary)", marginBottom: "0.5rem", transition: "color 0.3s" }}>
-      {paragraphs.map((p, i) => (
+      {displayParagraphs.map((p, i) => (
         <p key={i} style={{
           margin: "0 0 1.1em 0",
           animation: streaming || dimmed ? "none" : `sceneFadeIn 0.6s ease-out ${i * 0.15}s both`,
           opacity: streaming || dimmed ? 1 : undefined,
+          textAlign: p === "…" ? "center" : undefined,
+          color: p === "…" ? "var(--color-text-tertiary)" : undefined,
         }}>
           {p}
         </p>
@@ -91,16 +98,26 @@ function SceneText({ text, streaming, dimmed }: { text: string; streaming: boole
   );
 }
 
-function RevealingScene({ paragraphs, revealedCount, onAdvance, allRevealed }: {
+function RevealingScene({ paragraphs, revealedCount, onAdvance, allRevealed, sceneType }: {
   paragraphs: string[];
   revealedCount: number;
   onAdvance: () => void;
   allRevealed: boolean;
+  sceneType?: string;
 }) {
+  // Auto-advance for PULS scenes
+  useEffect(() => {
+    if (sceneType !== "puls" || allRevealed) return;
+    const timer = setTimeout(onAdvance, 800);
+    return () => clearTimeout(timer);
+  }, [sceneType, revealedCount, allRevealed, onAdvance]);
+
+  const fadeInDuration = sceneType === "andning" ? "0.8s" : "0.5s";
+
   return (
     <div
-      onClick={allRevealed ? undefined : onAdvance}
-      style={{ cursor: allRevealed ? "default" : "pointer", userSelect: allRevealed ? "auto" : "none" }}
+      onClick={allRevealed || sceneType === "puls" ? undefined : onAdvance}
+      style={{ cursor: allRevealed || sceneType === "puls" ? "default" : "pointer", userSelect: allRevealed ? "auto" : "none" }}
     >
       <div style={{ fontFamily: "Georgia, 'Times New Roman', serif", fontSize: "17px", lineHeight: "1.9", marginBottom: "0.5rem" }}>
         {paragraphs.slice(0, revealedCount).map((p, i) => {
@@ -110,7 +127,7 @@ function RevealingScene({ paragraphs, revealedCount, onAdvance, allRevealed }: {
             <p key={i} style={{
               margin: "0 0 1.1em 0",
               color: isPast ? "var(--color-text-secondary)" : "var(--color-text-primary)",
-              animation: isLatest ? "sceneFadeIn 0.5s ease-out both" : "none",
+              animation: isLatest ? `sceneFadeIn ${fadeInDuration} ease-out both` : "none",
               transition: "color 0.4s ease",
             }}>
               {p}
@@ -118,7 +135,7 @@ function RevealingScene({ paragraphs, revealedCount, onAdvance, allRevealed }: {
           );
         })}
       </div>
-      {!allRevealed && (
+      {!allRevealed && sceneType !== "puls" && (
         <div style={{ textAlign: "center", padding: "0.25rem 0" }}>
           <span style={{
             display: "inline-block",
@@ -142,27 +159,29 @@ function RevealingScene({ paragraphs, revealedCount, onAdvance, allRevealed }: {
 function ActionHints({ hints, onSelect }: { hints: string[]; onSelect: (hint: string) => void }) {
   if (hints.length === 0) return null;
   return (
-    <div style={{ display: "flex", flexWrap: "wrap", gap: "8px", marginBottom: "1rem" }}>
+    <div style={{ display: "flex", flexDirection: "column", gap: "6px", marginBottom: "1rem" }}>
       {hints.map((hint, i) => (
         <button
           key={i}
           onClick={() => onSelect(hint)}
           style={{
-            padding: "6px 14px",
-            fontSize: "13px",
+            padding: "6px 0 6px 12px",
+            fontSize: "14px",
             fontFamily: "Georgia, serif",
+            fontStyle: "italic",
             color: "var(--color-text-secondary)",
-            background: "var(--color-background-secondary)",
-            border: "0.5px solid var(--color-border-tertiary)",
-            borderRadius: "20px",
+            background: "transparent",
+            border: "none",
+            borderLeft: "2px solid var(--color-border-tertiary)",
             cursor: "pointer",
-            transition: "all 0.2s",
-            animation: `sceneFadeIn 0.4s ease-out ${i * 0.1}s both`,
+            transition: "all 0.3s",
+            animation: `sceneFadeIn 0.5s ease-out ${i * 0.3}s both`,
+            textAlign: "left",
           }}
-          onMouseEnter={(e) => { e.currentTarget.style.color = "var(--color-text-primary)"; e.currentTarget.style.borderColor = "var(--color-border-secondary)"; }}
-          onMouseLeave={(e) => { e.currentTarget.style.color = "var(--color-text-secondary)"; e.currentTarget.style.borderColor = "var(--color-border-tertiary)"; }}
+          onMouseEnter={(e) => { e.currentTarget.style.color = "var(--color-text-primary)"; e.currentTarget.style.borderLeftColor = "var(--color-text-secondary)"; }}
+          onMouseLeave={(e) => { e.currentTarget.style.color = "var(--color-text-secondary)"; e.currentTarget.style.borderLeftColor = "var(--color-border-tertiary)"; }}
         >
-          {hint}
+          — {hint}
         </button>
       ))}
     </div>
@@ -423,7 +442,7 @@ export default function EchoGame({ initialSave, onSave, onMenu, onStateChange }:
         const res = await fetch("/api/game/ambient", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ state: stateRef.current, lastSceneSummary: summary }),
+          body: JSON.stringify({ state: stateRef.current, lastSceneSummary: summary, ambientHook: stateRef.current.ambientHook, sceneType: stateRef.current.sceneType }),
           signal: controller.signal,
         });
         if (!res.ok) { hadError = true; } else {
@@ -657,6 +676,7 @@ export default function EchoGame({ initialSave, onSave, onMenu, onStateChange }:
               revealedCount={revealedCount}
               onAdvance={advanceReveal}
               allRevealed={allRevealed}
+              sceneType={meta.sceneType}
             />
           </div>
         )}
@@ -689,7 +709,7 @@ export default function EchoGame({ initialSave, onSave, onMenu, onStateChange }:
           <input value={input}
             onChange={(e) => { setInput(e.target.value); if (e.target.value) setAmbientPaused(true); else setAmbientPaused(false); }}
             onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendInput(); } }}
-            placeholder={isStreaming ? "ECHO skriver..." : "Vad gör du?"}
+            placeholder={isStreaming ? "ECHO skriver..." : meta.sceneType === "puls" ? "..." : meta.sceneType === "andning" ? "Du tänker på..." : "Vad gör du?"}
             disabled={isStreaming || isRevealing}
             style={{ flex: 1, padding: "12px 16px", fontSize: "14px", border: "0.5px solid var(--color-border-secondary)", borderRadius: "8px", background: "var(--color-background-primary)", color: "var(--color-text-primary)", outline: "none" }} />
           <button onClick={() => sendInput()} disabled={isStreaming || isRevealing || !input.trim()}
