@@ -3,28 +3,20 @@
 @tailwind utilities;
 
 :root {
-  --color-background-primary: #ffffff;
-  --color-background-secondary: #f5f5f4;
-  --color-background-tertiary: #e7e5e4;
-  --color-text-primary: #1c1917;
-  --color-text-secondary: #57534e;
-  --color-text-tertiary: #a8a29e;
-  --color-border-secondary: #d6d3d1;
-  --color-border-tertiary: #e7e5e4;
+  --color-background-primary: #0a0a0f;
+  --color-background-secondary: #0f1118;
+  --color-background-tertiary: #060609;
+  --color-text-primary: #c8d6c8;
+  --color-text-secondary: #6b7f6b;
+  --color-text-tertiary: #3a4a3a;
+  --color-border-secondary: #1a2a1a;
+  --color-border-tertiary: #111a11;
+  --color-accent-green: #00ff88;
+  --color-accent-amber: #ffaa00;
+  --color-accent-red: #ff2244;
+  --color-accent-teal: #00ccaa;
+  --color-glow-green: rgba(0, 255, 136, 0.15);
   --font-sans: system-ui, -apple-system, sans-serif;
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --color-background-primary: #1c1917;
-    --color-background-secondary: #292524;
-    --color-background-tertiary: #0c0a09;
-    --color-text-primary: #fafaf9;
-    --color-text-secondary: #a8a29e;
-    --color-text-tertiary: #78716c;
-    --color-border-secondary: #44403c;
-    --color-border-tertiary: #292524;
-  }
 }
 
 body {
@@ -32,6 +24,51 @@ body {
   background: var(--color-background-tertiary);
   color: var(--color-text-primary);
   -webkit-text-size-adjust: 100%;
+}
+
+/* CRT scanlines */
+body::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  background: repeating-linear-gradient(
+    0deg,
+    transparent,
+    transparent 2px,
+    rgba(0, 255, 136, 0.015) 2px,
+    rgba(0, 255, 136, 0.015) 4px
+  );
+  pointer-events: none;
+  z-index: 9999;
+}
+
+/* Vignette */
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  background: radial-gradient(ellipse at center, transparent 50%, rgba(0, 0, 0, 0.6) 100%);
+  pointer-events: none;
+  z-index: 9998;
+}
+
+/* Keyframes */
+@keyframes typewriterCursor {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0; }
+}
+
+@keyframes glitchFlicker {
+  0% { transform: translateX(0); filter: hue-rotate(0deg); }
+  25% { transform: translateX(-2px); filter: hue-rotate(20deg); }
+  50% { transform: translateX(1px); filter: hue-rotate(-10deg); }
+  75% { transform: translateX(-1px); filter: hue-rotate(15deg); }
+  100% { transform: translateX(0); filter: hue-rotate(0deg); }
+}
+
+@keyframes compliancePulse {
+  0%, 100% { box-shadow: 0 0 4px rgba(0, 255, 136, 0.2); }
+  50% { box-shadow: 0 0 12px rgba(0, 255, 136, 0.5); }
 }
 
 /* Mobile responsive adjustments */
