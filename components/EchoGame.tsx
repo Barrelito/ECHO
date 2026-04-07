@@ -383,6 +383,18 @@ function EchoThinking({ message }: { message: string }) {
 }
 
 const FLAG_LABELS: Record<string, string> = {
+  // Swedish keys (new format)
+  "hittade_hexagrammet": "Hexagrammet — en empatikod, gömd i systemets djup",
+  "hörde_evelyns_röst": "Evelyns röst — fragment av ett medvetande som inte borde existera",
+  "mötte_daniel": "Daniel Voss — kopparmyntet, skulden, off-grid i Aspudden",
+  "känner_till_kymlinge": "Kymlinge — spökstationen. Silverpilen. Betong utan färg.",
+  "hittade_spökhanden": "Spökhanden — biometrisk mask. ECHO ser dig inte.",
+  "kontaktade_motståndet": "Motståndet — krypterade whispers i stadens brus",
+  "besökte_serverhall_noll": "Serverhall Noll — arton grader. Mörkret andas.",
+  "mötte_kane": "Gabriel Kane — karismatisk, övertygad. Tror att han styr ECHO.",
+  "mötte_marcus": "Marcus Raine — raderad Titan. Få ord. Stor tystnad.",
+  "mötte_sofia": "Sofia — pragmatisk, stridshärdad. Värmen är begravd djupt.",
+  // Legacy English keys
   found_hexagram_mention: "Hexagrammet — en empatikod, gömd i systemets djup",
   heard_evelyns_voice: "Evelyns röst — fragment av ett medvetande som inte borde existera",
   met_daniel: "Daniel Voss — kopparmyntet, skulden, off-grid i Aspudden",
@@ -394,6 +406,12 @@ const FLAG_LABELS: Record<string, string> = {
   met_marcus: "Marcus Raine — raderad Titan. Få ord. Stor tystnad.",
   met_sofia: "Sofia — pragmatisk, stridshärdad. Värmen är begravd djupt.",
 };
+
+// Format unknown flag keys nicely — capitalize and replace underscores
+function formatFlagKey(key: string): string {
+  const cleaned = key.replace(/_/g, " ");
+  return cleaned.charAt(0).toUpperCase() + cleaned.slice(1);
+}
 
 function Journal({ flags, open, onToggle }: { flags: Record<string, boolean>; open: boolean; onToggle: () => void }) {
   const discovered = Object.entries(flags).filter(([, v]) => v);
@@ -423,7 +441,7 @@ function Journal({ flags, open, onToggle }: { flags: Record<string, boolean>; op
                 marginBottom: "0.4rem",
                 animation: "sceneFadeIn 0.4s ease-out both",
               }}>
-                {FLAG_LABELS[key] || key.replace(/_/g, " ")}
+                {FLAG_LABELS[key] || formatFlagKey(key)}
               </div>
             ))}
           </div>
@@ -762,7 +780,17 @@ export default function EchoGame({ initialSave, onSave, onMenu, onStateChange }:
   return (
     <div style={{ minHeight: "100vh", display: "flex", justifyContent: "center", padding: "1.5rem 1rem 3rem" }}>
       <div style={{ maxWidth: "680px", width: "100%" }}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1.5rem" }}>
+        <div style={{
+          position: "sticky",
+          top: 0,
+          zIndex: 10,
+          background: "var(--color-background-primary)",
+          paddingTop: "0.5rem",
+          paddingBottom: "0.75rem",
+          borderBottom: "0.5px solid var(--color-border-tertiary)",
+          marginBottom: "1rem",
+        }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
           <span style={{ fontSize: "18px", fontWeight: 400, fontFamily: "Georgia, serif", letterSpacing: "0.1em" }}>ECHO</span>
           <div style={{ display: "flex", gap: "16px", alignItems: "center" }}>
             <span
@@ -796,6 +824,7 @@ export default function EchoGame({ initialSave, onSave, onMenu, onStateChange }:
             <span style={{ fontSize: "11px", color: "var(--color-text-tertiary)", letterSpacing: "0.08em", textTransform: "uppercase" }}>Tur {state?.turnCount ?? 0}</span>
           </div>
         </div>
+        </div>{/* end sticky header */}
 
         <div
           onClick={() => setHudExpanded((v) => !v)}

@@ -295,8 +295,8 @@ REGLER FÖR ---STATE-BLOCKET:
 - complianceDelta: förändringen denna tur (positivt eller negativt tal, 0 om ingen förändring)
 - inNeuralDive: true om spelaren är i neural dykning
 - echoAwareness: "low", "medium" eller "high"
-- flags: objekt med narrativa flaggor som blivit sanna denna tur, t.ex. {"met_daniel":true}
-- hints: EXAKT 3 fragment av karaktärens inre röst — tankar, impulser, frågor. Max 8 ord var. Minst en ska vara en fråga eller ett tvivel. De ska låta som ofärdiga tankar, inte menyval.
+- flags: objekt med narrativa flaggor som blivit sanna denna tur. Använd SVENSKA nycklar och ALLTID formatet {"nyckel":true}. Exempel: {"mötte_daniel":true,"hörde_evelyns_röst":true,"hittade_kopparmyntet":true}. Nycklarna ska vara korta, beskrivande, på svenska med understreck.
+- hints: EXAKT 3 fragment av karaktärens inre röst — tankar, impulser, frågor. Max 8 ord var. Minst en ska vara en fråga eller ett tvivel. De ska låta som ofärdiga tankar, inte menyval. VIKTIGT: Generera ALLTID exakt 3 hints, oavsett hur många turer som spelats. Hints ska ALDRIG utelämnas.
   DÅLIGT: ["Gå till Pionen", "Undersök kapseln", "Ring Sofia"]
   BRA: ["Kopparmyntet... var har jag sett det?", "Tunneln andas", "Sofia skulle veta"]
 - ambientHook: En kort fras (max 10 ord) som ger stämning för bakgrundshändelser — ett ljud, en känsla, en detalj ambient-systemet kan spinna vidare på.
