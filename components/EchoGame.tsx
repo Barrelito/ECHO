@@ -2,6 +2,8 @@
 
 import { useState, useEffect, useRef, useCallback } from "react";
 import type { GameState, GameMessage, Meta, SaveData, PressureData } from "@/lib/types";
+import { getLatestSave } from "@/lib/saves";
+import { useAuth } from "@/components/AuthProvider";
 
 function useIsMobile() {
   const [isMobile, setIsMobile] = useState(false);
@@ -738,6 +740,7 @@ function formatTime(seconds: number): string {
 
 export default function EchoGame({ initialSave, onSave, onMenu, onStateChange }: EchoGameProps) {
   const isMobile = useIsMobile();
+  const { user } = useAuth();
   const [scene, setScene] = useState(initialSave?.scene ?? "");
   const [streamingText, setStreamingText] = useState("");
   const [justStreamed, setJustStreamed] = useState(false);
@@ -785,6 +788,10 @@ export default function EchoGame({ initialSave, onSave, onMenu, onStateChange }:
   const ambientPausedRef = useRef(false);
   const ambientStoppedRef = useRef(false);
   const stateRef = useRef(state);
+
+  // Game over state
+  const [gameOver, setGameOver] = useState(false);
+  const [deathScene, setDeathScene] = useState("");
 
   // Pressure timer state
   const [pressureTimer, setPressureTimer] = useState<number | null>(null);
@@ -946,6 +953,27 @@ export default function EchoGame({ initialSave, onSave, onMenu, onStateChange }:
     onSave(state, history, scene, initialSave?.id);
   }, [state, history, scene, initialSave?.id, onSave]);
 
+  async function handleLoadLastSave() {
+    const save = await getLatestSave();
+    if (!save) return;
+    setScene(save.scene);
+    setHistory(save.history);
+    setState(save.state);
+    setMeta({
+      location: save.state.location,
+      time: save.state.time,
+      compliance: save.state.compliance,
+      inNeuralDive: save.state.inNeuralDive,
+      echoAwareness: save.state.echoAwareness,
+    });
+    setPastScenes([]);
+    setHints([]);
+    setGameOver(false);
+    setDeathScene("");
+    clearPressure();
+    startAmbient();
+  }
+
   async function readStream(response: Response, onText: (text: string) => void, onDone: (state: GameState, meta: Meta) => void) {
     const reader = response.body!.getReader();
     const decoder = new TextDecoder();
@@ -990,6 +1018,10 @@ export default function EchoGame({ initialSave, onSave, onMenu, onStateChange }:
         onStateChange?.(newState, [], accumulated);
         if (newMeta.pressure) {
           startPressureTimer(newMeta.pressure);
+        }
+        if (newMeta.gameOver) {
+          setDeathScene(accumulated);
+          setTimeout(() => setGameOver(true), 1500);
         }
       });
     } catch { setScene("Systemfel. ECHO svarar inte."); }
@@ -1043,6 +1075,10 @@ export default function EchoGame({ initialSave, onSave, onMenu, onStateChange }:
         onStateChange?.(newState, newHistory, accumulated);
         if (newMeta.pressure) {
           startPressureTimer(newMeta.pressure);
+        }
+        if (newMeta.gameOver) {
+          setDeathScene(accumulated);
+          setTimeout(() => setGameOver(true), 1500);
         }
       });
     } catch { setScene("Systemfel. ECHO svarar inte."); setAmbientFragments([]); setAmbientDimmed(false); }
@@ -1272,6 +1308,82 @@ export default function EchoGame({ initialSave, onSave, onMenu, onStateChange }:
           }} />
         )}
       </div>
+
+      {/* Game Over overlay */}
+      {gameOver && (
+        <div style={{
+          position: "fixed",
+          inset: 0,
+          background: "rgba(6,6,9,0.95)",
+          zIndex: 10000,
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          justifyContent: "center",
+          fontFamily: "var(--font-mono, monospace)",
+          animation: "fadeIn 0.5s ease-out",
+        }}>
+          {/* CRT scanlines */}
+          <div style={{
+            position: "absolute", inset: 0,
+            background: "repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(255,34,68,0.02) 2px, rgba(255,34,68,0.02) 4px)",
+            pointerEvents: "none",
+          }} />
+          {/* Vignette */}
+          <div style={{
+            position: "absolute", inset: 0,
+            background: "radial-gradient(ellipse at center, transparent 30%, rgba(0,0,0,0.8) 100%)",
+            pointerEvents: "none",
+          }} />
+
+          <div style={{
+            fontSize: "32px", color: "var(--color-accent-red)",
+            letterSpacing: "0.3em",
+            textShadow: "0 0 20px rgba(255,34,68,0.6), 2px 0 #ff2244, -2px 0 #00ccaa",
+            marginBottom: "1.5rem",
+            position: "relative",
+          }}>SYSTEMFEL</div>
+
+          <div style={{
+            fontSize: "12px", color: "var(--color-text-tertiary)",
+            letterSpacing: "0.15em", textTransform: "uppercase",
+            marginBottom: "2rem",
+            position: "relative",
+          }}>Subjekt förlorad — compliance terminated</div>
+
+          <div style={{
+            fontSize: "14px", color: "var(--color-text-secondary)",
+            lineHeight: 1.8, maxWidth: "400px", marginBottom: "2.5rem",
+            textAlign: "left", borderLeft: "2px solid var(--color-accent-red)",
+            paddingLeft: "1rem",
+            position: "relative",
+          }}>{cleanSceneText(deathScene)}</div>
+
+          <div style={{ display: "flex", flexDirection: "column", gap: "8px", width: "260px", position: "relative" }}>
+            <button
+              onClick={handleLoadLastSave}
+              disabled={!user}
+              style={{
+                padding: "10px", fontSize: "12px",
+                border: "1px solid var(--color-accent-red)", borderRadius: 0,
+                background: "transparent",
+                color: user ? "var(--color-accent-red)" : "var(--color-text-tertiary)",
+                fontFamily: "inherit", letterSpacing: "0.06em",
+                cursor: user ? "pointer" : "not-allowed",
+                textShadow: user ? "0 0 4px rgba(255,34,68,0.3)" : "none",
+                opacity: user ? 1 : 0.4,
+              }}>{user ? "> LADDA SENASTE SPARNING" : "> INGEN SPARNING TILLGÄNGLIG"}</button>
+            {onMenu && (
+              <button onClick={() => onMenu(false)} style={{
+                padding: "10px", fontSize: "12px",
+                border: "1px solid var(--color-border-secondary)", borderRadius: 0,
+                background: "transparent", color: "var(--color-text-tertiary)",
+                fontFamily: "inherit", letterSpacing: "0.06em", cursor: "pointer",
+              }}>&gt; HUVUDMENY</button>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
