@@ -775,7 +775,6 @@ export default function EchoGame({ initialSave, onSave, onMenu, onStateChange }:
   const [revealedCount, setRevealedCount] = useState(0);
   const isRevealing = revealParagraphs.length > 0 && revealedCount < revealParagraphs.length;
   const allRevealed = revealParagraphs.length > 0 && revealedCount >= revealParagraphs.length;
-  const bottomRef = useRef<HTMLDivElement>(null);
   const loadingMessage = useEchoLoadingMessage(isThinking);
 
   // Ambient state
@@ -820,32 +819,7 @@ export default function EchoGame({ initialSave, onSave, onMenu, onStateChange }:
     return () => window.removeEventListener("keydown", handleKey);
   }, [isRevealing, advanceReveal]);
 
-  const scrollRafRef = useRef<number | null>(null);
-  const smoothScrollTo = useCallback((target: number) => {
-    if (scrollRafRef.current) cancelAnimationFrame(scrollRafRef.current);
-    const start = window.scrollY;
-    const distance = target - start;
-    if (Math.abs(distance) < 2) return;
-    const duration = Math.min(800, Math.max(300, Math.abs(distance) * 1.5));
-    const startTime = performance.now();
-    function step(now: number) {
-      const elapsed = now - startTime;
-      const progress = Math.min(elapsed / duration, 1);
-      const ease = progress < 0.5
-        ? 2 * progress * progress
-        : 1 - Math.pow(-2 * progress + 2, 2) / 2;
-      window.scrollTo(0, start + distance * ease);
-      if (progress < 1) scrollRafRef.current = requestAnimationFrame(step);
-      else scrollRafRef.current = null;
-    }
-    scrollRafRef.current = requestAnimationFrame(step);
-  }, []);
-
-  useEffect(() => {
-    if (!bottomRef.current) return;
-    const targetY = bottomRef.current.getBoundingClientRect().top + window.scrollY - window.innerHeight + 80;
-    if (targetY > window.scrollY) smoothScrollTo(targetY);
-  }, [streamingText, isThinking, ambientFragments, revealedCount, smoothScrollTo]);
+  // Player controls their own scrolling — no autoscroll
 
   // Page Visibility API
   useEffect(() => {
@@ -1215,17 +1189,10 @@ export default function EchoGame({ initialSave, onSave, onMenu, onStateChange }:
           </div>
         )}
 
-        {/* Streaming: show text as it arrives */}
-        {isStreaming && !isThinking && streamingText && (
+        {/* Current scene: show streaming text as it arrives, then keep showing final scene in-place */}
+        {((isStreaming && !isThinking && streamingText) || (!isStreaming && scene)) && (
           <div style={{ borderTop: "1px solid var(--color-border-secondary)", padding: "1rem 0", marginBottom: "1.5rem" }}>
-            <SceneText text={streamingText} streaming={true} compliance={meta.compliance} />
-          </div>
-        )}
-
-        {/* Current scene: show after streaming is complete */}
-        {!isStreaming && scene && (
-          <div style={{ borderTop: "1px solid var(--color-border-secondary)", padding: "1rem 0", marginBottom: "1.5rem" }}>
-            <SceneText text={scene} streaming={false} compliance={meta.compliance} skipAnimation={justStreamed} />
+            <SceneText text={isStreaming ? streamingText : scene} streaming={isStreaming} compliance={meta.compliance} skipAnimation={justStreamed || isStreaming} />
           </div>
         )}
 
@@ -1293,7 +1260,6 @@ export default function EchoGame({ initialSave, onSave, onMenu, onStateChange }:
             disabled={isStreaming}
             style={{ flex: 1, padding: "10px 0", fontSize: isMobile ? "16px" : "14px", border: "none", borderBottom: `1px solid ${pressureData ? "var(--color-accent-red)" : "var(--color-accent-teal)"}`, borderRadius: 0, background: "transparent", color: "var(--color-accent-green)", caretColor: "var(--color-accent-green)", outline: "none", fontFamily: "inherit", letterSpacing: "0.02em" }} />
         </div>
-        <div ref={bottomRef} />
 
         {/* Discovery toast — show one at a time from queue */}
         {discoveryQueue.length > 0 && (
