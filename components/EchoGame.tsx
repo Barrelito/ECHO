@@ -190,16 +190,31 @@ function ActionHints({ hints, onSelect }: { hints: string[]; onSelect: (hint: st
 
 function EchoThinking({ message }: { message: string }) {
   return (
-    <div style={{ display: "flex", alignItems: "center", gap: "10px", padding: "0.75rem 1rem", background: "var(--color-background-secondary)", borderRadius: "8px", marginBottom: "0.75rem" }}>
-      <div style={{ display: "flex", gap: "4px", alignItems: "center" }}>
+    <div style={{
+      padding: "2rem 2.25rem",
+      background: "var(--color-background-primary)",
+      border: "0.5px solid var(--color-border-tertiary)",
+      borderRadius: "12px",
+      marginBottom: "1.5rem",
+      minHeight: "120px",
+      display: "flex",
+      flexDirection: "column",
+      justifyContent: "center",
+      alignItems: "center",
+      gap: "16px",
+    }}>
+      <div style={{ display: "flex", gap: "6px", alignItems: "center" }}>
         {[0, 1, 2].map((i) => (
-          <div key={i} style={{ width: "5px", height: "5px", borderRadius: "50%", background: "var(--color-text-tertiary)", animation: `pulse 1.2s ease-in-out ${i * 0.2}s infinite` }} />
+          <div key={i} style={{ width: "6px", height: "6px", borderRadius: "50%", background: "var(--color-text-tertiary)", animation: `pulse 1.4s ease-in-out ${i * 0.25}s infinite` }} />
         ))}
       </div>
-      <span style={{ fontSize: "12px", color: "var(--color-text-tertiary)", letterSpacing: "0.04em", fontFamily: "var(--font-mono, monospace)" }}>
-        ECHO · {message}
+      <span style={{ fontSize: "11px", color: "var(--color-text-tertiary)", letterSpacing: "0.08em", fontFamily: "var(--font-mono, monospace)", textTransform: "uppercase", animation: "thinkingFade 1.8s ease-in-out infinite" }}>
+        {message}
       </span>
-      <style>{`@keyframes pulse { 0%, 100% { opacity: 0.3; transform: scale(0.8); } 50% { opacity: 1; transform: scale(1); } }`}</style>
+      <style>{`
+        @keyframes pulse { 0%, 100% { opacity: 0.2; transform: scale(0.7); } 50% { opacity: 0.8; transform: scale(1); } }
+        @keyframes thinkingFade { 0%, 100% { opacity: 0.4; } 50% { opacity: 0.8; } }
+      `}</style>
     </div>
   );
 }
@@ -508,7 +523,7 @@ export default function EchoGame({ initialSave, onSave, onMenu, onStateChange }:
     let accumulated = "";
     try {
       const res = await fetch("/api/game");
-      await readStream(res, (text) => { accumulated += text; }, (newState, newMeta) => {
+      await readStream(res, (text) => { accumulated += text; setStreamingText(accumulated); }, (newState, newMeta) => {
         setScene(accumulated); setStreamingText(""); setState(newState); setMeta(newMeta);
         setHints(newMeta.hints ?? []); setHasUnsavedChanges(true);
         onStateChange?.(newState, [], accumulated);
@@ -555,6 +570,7 @@ export default function EchoGame({ initialSave, onSave, onMenu, onStateChange }:
       await readStream(res, (text) => {
         if (!clearedFragments) { setAmbientFragments([]); setAmbientDimmed(false); clearedFragments = true; }
         accumulated += text;
+        setStreamingText(accumulated);
       }, (newState, newMeta) => {
         setScene(accumulated); setStreamingText(""); setState(newState); setMeta(newMeta);
         setHints(newMeta.hints ?? []); setHistory(newHistory); setHasUnsavedChanges(true);
@@ -666,6 +682,12 @@ export default function EchoGame({ initialSave, onSave, onMenu, onStateChange }:
                 </div>
               </div>
             ))}
+          </div>
+        )}
+
+        {isStreaming && !isThinking && streamingText && revealParagraphs.length === 0 && (
+          <div style={{ background: "var(--color-background-primary)", border: "0.5px solid var(--color-border-tertiary)", borderRadius: "12px", padding: "2rem 2.25rem", marginBottom: "1.5rem" }}>
+            <SceneText text={streamingText} streaming={true} />
           </div>
         )}
 
