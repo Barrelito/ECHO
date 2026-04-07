@@ -5,6 +5,17 @@ import { useAuth } from "@/components/AuthProvider";
 import { getSaves, deleteSave } from "@/lib/saves";
 import type { SaveData } from "@/lib/types";
 
+function useIsMobile() {
+  const [isMobile, setIsMobile] = useState(false);
+  useEffect(() => {
+    const check = () => setIsMobile(window.innerWidth <= 640);
+    check();
+    window.addEventListener("resize", check);
+    return () => window.removeEventListener("resize", check);
+  }, []);
+  return isMobile;
+}
+
 interface SavesGridProps {
   onSelectSave: (save: SaveData) => void;
   onNewGame: () => void;
@@ -42,15 +53,16 @@ export default function SavesGrid({ onSelectSave, onNewGame, onLogout }: SavesGr
   }
 
   const canCreateNew = saves.length < 10;
+  const isMobile = useIsMobile();
 
   return (
-    <div style={{ minHeight: "100vh", display: "flex", justifyContent: "center", padding: "2rem 1rem" }}>
+    <div style={{ minHeight: "100vh", display: "flex", justifyContent: "center", padding: isMobile ? "1.5rem 0.75rem" : "2rem 1rem" }}>
       <div style={{ maxWidth: "520px", width: "100%" }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "2rem" }}>
           <span style={{ fontSize: "18px", fontWeight: 400, fontFamily: "Georgia, serif", letterSpacing: "0.1em" }}>ECHO</span>
-          <div style={{ display: "flex", gap: "16px", alignItems: "center" }}>
-            <span style={{ fontSize: "10px", color: "var(--color-text-tertiary)" }}>{user?.email}</span>
-            <span onClick={handleLogout} style={{ fontSize: "10px", color: "var(--color-text-tertiary)", cursor: "pointer", textDecoration: "underline" }}>Logga ut</span>
+          <div style={{ display: "flex", gap: "12px", alignItems: "center" }}>
+            {!isMobile && <span style={{ fontSize: "10px", color: "var(--color-text-tertiary)" }}>{user?.email}</span>}
+            <span onClick={handleLogout} style={{ fontSize: isMobile ? "12px" : "10px", color: "var(--color-text-tertiary)", cursor: "pointer", textDecoration: "underline", padding: isMobile ? "8px 4px" : "0", minHeight: isMobile ? "44px" : "auto", display: "flex", alignItems: "center" }}>Logga ut</span>
           </div>
         </div>
 
@@ -61,7 +73,7 @@ export default function SavesGrid({ onSelectSave, onNewGame, onLogout }: SavesGr
         {loading ? (
           <div style={{ textAlign: "center", padding: "3rem", color: "var(--color-text-tertiary)", fontSize: "12px" }}>Laddar...</div>
         ) : (
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
+          <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: "12px" }}>
             {saves.map((save) => (
               <div
                 key={save.id}
@@ -80,7 +92,7 @@ export default function SavesGrid({ onSelectSave, onNewGame, onLogout }: SavesGr
                 <div
                   data-delete=""
                   onClick={(e) => { e.stopPropagation(); setDeleteConfirm(save.id); }}
-                  style={{ position: "absolute", top: "8px", right: "8px", fontSize: "12px", color: "var(--color-text-tertiary)", cursor: "pointer", opacity: 0, transition: "opacity 0.2s" }}
+                  style={{ position: "absolute", top: "8px", right: "8px", fontSize: "12px", color: "var(--color-text-tertiary)", cursor: "pointer", opacity: isMobile ? 0.6 : 0, transition: "opacity 0.2s", padding: isMobile ? "8px" : "0" }}
                 >
                   🗑
                 </div>

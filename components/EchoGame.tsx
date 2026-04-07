@@ -3,6 +3,17 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import type { GameState, GameMessage, Meta, SaveData } from "@/lib/types";
 
+function useIsMobile() {
+  const [isMobile, setIsMobile] = useState(false);
+  useEffect(() => {
+    const check = () => setIsMobile(window.innerWidth <= 640);
+    check();
+    window.addEventListener("resize", check);
+    return () => window.removeEventListener("resize", check);
+  }, []);
+  return isMobile;
+}
+
 const ECHO_LOADING_MESSAGES = [
   "Bearbetar biometrisk data...",
   "Analyserar rörelsemönster...",
@@ -721,6 +732,7 @@ export interface EchoGameProps {
 }
 
 export default function EchoGame({ initialSave, onSave, onMenu, onStateChange }: EchoGameProps) {
+  const isMobile = useIsMobile();
   const [scene, setScene] = useState(initialSave?.scene ?? "");
   const [streamingText, setStreamingText] = useState("");
   const [justStreamed, setJustStreamed] = useState(false);
@@ -1001,7 +1013,7 @@ export default function EchoGame({ initialSave, onSave, onMenu, onStateChange }:
   const latestFragment = ambientFragments.length > 0 ? ambientFragments[ambientFragments.length - 1] : null;
 
   return (
-    <div style={{ minHeight: "100vh", display: "flex", justifyContent: "center", padding: "1.5rem 1rem 3rem" }}>
+    <div style={{ minHeight: "100vh", display: "flex", justifyContent: "center", padding: isMobile ? "0.75rem 0.5rem 5rem" : "1.5rem 1rem 3rem" }}>
       <div style={{ maxWidth: "680px", width: "100%" }}>
         {/* Sticky header + HUD */}
         <div style={{
@@ -1015,37 +1027,34 @@ export default function EchoGame({ initialSave, onSave, onMenu, onStateChange }:
         }}>
           {/* Top row: title + nav */}
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.5rem" }}>
-            <span style={{ fontSize: "18px", fontWeight: 400, fontFamily: "Georgia, serif", letterSpacing: "0.1em" }}>ECHO</span>
-            <div style={{ display: "flex", gap: "16px", alignItems: "center" }}>
-              <span
-                onClick={() => setJournalOpen((v) => !v)}
-                style={{ fontSize: "10px", color: journalOpen ? "var(--color-text-primary)" : "var(--color-text-tertiary)", cursor: "pointer", letterSpacing: "0.06em", transition: "color 0.2s" }}
-              >
-                JOURNAL
-              </span>
-              <span
-                onClick={() => setMapOpen((v) => !v)}
-                style={{ fontSize: "10px", color: mapOpen ? "var(--color-text-primary)" : "var(--color-text-tertiary)", cursor: "pointer", letterSpacing: "0.06em", transition: "color 0.2s" }}
-              >
-                KARTA
-              </span>
-              {onSave && (
+            <span style={{ fontSize: isMobile ? "16px" : "18px", fontWeight: 400, fontFamily: "Georgia, serif", letterSpacing: "0.1em" }}>ECHO</span>
+            <div style={{ display: "flex", gap: isMobile ? "6px" : "16px", alignItems: "center" }}>
+              {([
+                { label: "JOURNAL", active: journalOpen, onClick: () => setJournalOpen((v) => !v) },
+                { label: "KARTA", active: mapOpen, onClick: () => setMapOpen((v) => !v) },
+                ...(onSave ? [{ label: "SPARA", active: false, onClick: isStreaming ? undefined : handleSave }] : []),
+                ...(onMenu ? [{ label: "MENY", active: false, onClick: () => onMenu(hasUnsavedChanges) }] : []),
+              ] as { label: string; active: boolean; onClick?: () => void }[]).map(({ label, active, onClick }) => (
                 <span
-                  onClick={isStreaming ? undefined : handleSave}
-                  style={{ fontSize: "10px", color: "var(--color-text-tertiary)", cursor: isStreaming ? "default" : "pointer", letterSpacing: "0.06em", opacity: isStreaming ? 0.4 : 1, transition: "opacity 0.2s" }}
+                  key={label}
+                  onClick={onClick}
+                  style={{
+                    fontSize: isMobile ? "11px" : "10px",
+                    color: active ? "var(--color-text-primary)" : "var(--color-text-tertiary)",
+                    cursor: onClick ? "pointer" : "default",
+                    letterSpacing: "0.06em",
+                    transition: "color 0.2s",
+                    padding: isMobile ? "8px 6px" : "0",
+                    minHeight: isMobile ? "44px" : "auto",
+                    display: "flex",
+                    alignItems: "center",
+                    opacity: label === "SPARA" && isStreaming ? 0.4 : 1,
+                  }}
                 >
-                  SPARA
+                  {label}
                 </span>
-              )}
-              {onMenu && (
-                <span
-                  onClick={() => onMenu(hasUnsavedChanges)}
-                  style={{ fontSize: "10px", color: "var(--color-text-tertiary)", cursor: "pointer", letterSpacing: "0.06em" }}
-                >
-                  MENY
-                </span>
-              )}
-              <span style={{ fontSize: "11px", color: "var(--color-text-tertiary)", letterSpacing: "0.08em", textTransform: "uppercase" }}>Tur {state?.turnCount ?? 0}</span>
+              ))}
+              <span style={{ fontSize: "11px", color: "var(--color-text-tertiary)", letterSpacing: "0.08em", textTransform: "uppercase", padding: isMobile ? "8px 0" : "0" }}>Tur {state?.turnCount ?? 0}</span>
             </div>
           </div>
 
@@ -1113,14 +1122,14 @@ export default function EchoGame({ initialSave, onSave, onMenu, onStateChange }:
 
         {/* Streaming: show text as it arrives */}
         {isStreaming && !isThinking && streamingText && (
-          <div style={{ background: "var(--color-background-primary)", border: "0.5px solid var(--color-border-tertiary)", borderRadius: "12px", padding: "2rem 2.25rem", marginBottom: "1.5rem" }}>
+          <div style={{ background: "var(--color-background-primary)", border: "0.5px solid var(--color-border-tertiary)", borderRadius: isMobile ? "8px" : "12px", padding: isMobile ? "1.25rem 1rem" : "2rem 2.25rem", marginBottom: "1.5rem" }}>
             <SceneText text={streamingText} streaming={true} compliance={meta.compliance} />
           </div>
         )}
 
         {/* Current scene: show after streaming is complete */}
         {!isStreaming && scene && (
-          <div style={{ background: "var(--color-background-primary)", border: "0.5px solid var(--color-border-tertiary)", borderRadius: "12px", padding: "2rem 2.25rem", marginBottom: "1.5rem" }}>
+          <div style={{ background: "var(--color-background-primary)", border: "0.5px solid var(--color-border-tertiary)", borderRadius: isMobile ? "8px" : "12px", padding: isMobile ? "1.25rem 1rem" : "2rem 2.25rem", marginBottom: "1.5rem" }}>
             <SceneText text={scene} streaming={false} compliance={meta.compliance} skipAnimation={justStreamed} />
           </div>
         )}
@@ -1148,15 +1157,15 @@ export default function EchoGame({ initialSave, onSave, onMenu, onStateChange }:
           </div>
         )}
 
-        <div style={{ display: "flex", gap: "8px", opacity: isStreaming ? 0.5 : 1, transition: "opacity 0.4s", pointerEvents: isStreaming ? "none" : "auto" }}>
+        <div className={isMobile ? "echo-input-bar" : ""} style={{ display: "flex", gap: "8px", opacity: isStreaming ? 0.5 : 1, transition: "opacity 0.4s", pointerEvents: isStreaming ? "none" : "auto" }}>
           <input value={input}
             onChange={(e) => { setInput(e.target.value); if (e.target.value) setAmbientPaused(true); else setAmbientPaused(false); }}
             onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendInput(); } }}
             placeholder={isStreaming ? "ECHO skriver..." : meta.sceneType === "puls" ? "..." : meta.sceneType === "andning" ? "Du tänker på..." : "Vad gör du?"}
             disabled={isStreaming}
-            style={{ flex: 1, padding: "12px 16px", fontSize: "14px", border: "0.5px solid var(--color-border-secondary)", borderRadius: "8px", background: "var(--color-background-primary)", color: "var(--color-text-primary)", outline: "none" }} />
+            style={{ flex: 1, padding: isMobile ? "14px 14px" : "12px 16px", fontSize: "16px", border: "0.5px solid var(--color-border-secondary)", borderRadius: "8px", background: "var(--color-background-primary)", color: "var(--color-text-primary)", outline: "none" }} />
           <button onClick={() => sendInput()} disabled={isStreaming || !input.trim()}
-            style={{ padding: "12px 20px", fontSize: "14px", border: "0.5px solid var(--color-border-secondary)", borderRadius: "8px", background: "transparent", color: "var(--color-text-primary)", cursor: isStreaming || !input.trim() ? "not-allowed" : "pointer", opacity: isStreaming || !input.trim() ? 0.4 : 1, transition: "opacity 0.3s" }}>
+            style={{ padding: isMobile ? "14px 18px" : "12px 20px", fontSize: "16px", border: "0.5px solid var(--color-border-secondary)", borderRadius: "8px", background: "transparent", color: "var(--color-text-primary)", cursor: isStreaming || !input.trim() ? "not-allowed" : "pointer", opacity: isStreaming || !input.trim() ? 0.4 : 1, transition: "opacity 0.3s", minHeight: "44px" }}>
             →
           </button>
         </div>

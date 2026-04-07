@@ -31,4 +31,33 @@ body {
   font-family: var(--font-sans);
   background: var(--color-background-tertiary);
   color: var(--color-text-primary);
+  -webkit-text-size-adjust: 100%;
+}
+
+/* Mobile responsive adjustments */
+@media (max-width: 640px) {
+  body {
+    font-size: 15px;
+  }
+}
+
+/* Ensure inputs don't zoom on iOS (font-size must be >= 16px) */
+@media (max-width: 640px) {
+  input, textarea, select {
+    font-size: 16px !important;
+  }
+}
+
+/* Sticky input bar for mobile */
+@media (max-width: 640px) {
+  .echo-input-bar {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    padding: 0.5rem 0.75rem calc(0.5rem + env(safe-area-inset-bottom));
+    background: var(--color-background-primary);
+    border-top: 0.5px solid var(--color-border-tertiary);
+    z-index: 20;
+  }
 }
