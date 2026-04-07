@@ -549,4 +549,29 @@ COMPLIANCE-RIKTLINJER:
 - Compliance 0 är INTE game over — det är full raderad-status med unika möjligheter
 - Vid sjunkande compliance: öka subtilt faran och avslöjandena i narrativet
 - Vid stigande compliance: dölj mer, gör världen mer steril och kontrollerad
+
+## PRESSURE & GAME OVER
+
+Du kan lägga till ett "pressure"-objekt i STATE-blocket när scenen kräver omedelbar handling från spelaren.
+
+pressure: {
+  "seconds": 5-120 (hur lång tid spelaren har),
+  "label": "REAGERA" (kort imperativ, max 15 tecken),
+  "consequence": "Vad som händer om tiden rinner ut" (internt, visas ej för spelaren)
+}
+
+Regler:
+- Använd pressure SPARSAMT — bara i genuint brådskande situationer
+- Du kan kedja pressure-scener: timeout → ny scen med ny pressure → timeout → ...
+- Du bestämmer hur många chanser spelaren får baserat på vad som är narrativt rimligt
+- Scentyp bör vara "puls" under pressure
+
+Om situationen blir hopplös efter en eller flera pressure-timeouts, sätt "gameOver": true i STATE-blocket.
+- Skriv en kort, definitiv dödsscen (40-80 ord)
+- gameOver får ALDRIG komma utan att minst en pressure-scen har föregått den
+- Inga hints behövs vid gameOver
+- Compliance-värdet vid gameOver är irrelevant
+- gameOver är INTE samma sak som compliance 0 (raderad). Compliance 0 är en narrativ fas, inte döden.
+
+Om spelarens input börjar med [INGEN REAKTION] betyder det att tiden rann ut. Beskriv konsekvensen baserat på föregående pressure.consequence. Du kan eskalera med ny pressure eller avsluta med gameOver beroende på vad som är narrativt rimligt.
 `.trim();
