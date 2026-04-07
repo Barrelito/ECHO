@@ -15,6 +15,78 @@ export async function getSaves(): Promise<SaveData[]> {
   return data ?? [];
 }
 
+export async function getLatestSave(): Promise<SaveData | null> {
+  const supabase = getSupabase();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return null;
+
+  const { data, error } = await supabase
+    .from("game_saves")
+    .select("*")
+    .eq("user_id", user.id)
+    .order("updated_at", { ascending: false })
+    .limit(1)
+    .single();
+
+  if (error || !data) return null;
+  return data;
+}
+
+export async function upsertAutoSave(
+  state: GameState,
+  history: GameMessage[],
+  scene: string
+): Promise<SaveData | null> {
+  const supabase = getSupabase();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return null;
+
+  // Check for existing auto-save
+  const { data: existing } = await supabase
+    .from("game_saves")
+    .select("id")
+    .eq("user_id", user.id)
+    .eq("name", "Auto-save")
+    .limit(1)
+    .single();
+
+  if (existing) {
+    // Update existing auto-save
+    const { error } = await supabase
+      .from("game_saves")
+      .update({
+        state,
+        history: history.slice(-MAX_HISTORY_MESSAGES),
+        scene,
+      })
+      .eq("id", existing.id);
+    if (error) return null;
+    return null; // Return value not used by caller
+  } else {
+    // Create new auto-save (check limit first)
+    const { count } = await supabase
+      .from("game_saves")
+      .select("id", { count: "exact", head: true });
+
+    if (count !== null && count >= MAX_SAVES) return null;
+
+    const { data, error } = await supabase
+      .from("game_saves")
+      .insert({
+        user_id: user.id,
+        name: "Auto-save",
+        state,
+        history: history.slice(-MAX_HISTORY_MESSAGES),
+        scene,
+      })
+      .select()
+      .single();
+
+    if (error || !data) return null;
+    return data;
+  }
+}
+
 export async function createSave(
   name: string,
   state: GameState,
