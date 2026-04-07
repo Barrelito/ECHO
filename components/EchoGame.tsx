@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback } from "react";
 import type { GameState, GameMessage, Meta, SaveData, PressureData } from "@/lib/types";
-import { getLatestSave } from "@/lib/saves";
+import { getLatestSave, upsertAutoSave } from "@/lib/saves";
 import { useAuth } from "@/components/AuthProvider";
 
 function useIsMobile() {
@@ -1016,6 +1016,10 @@ export default function EchoGame({ initialSave, onSave, onMenu, onStateChange }:
         setComplianceDelta(newMeta.complianceDelta ?? 0);
         if (newMeta.newFlags?.length) setDiscoveryQueue(prev => [...prev, ...newMeta.newFlags!]);
         onStateChange?.(newState, [], accumulated);
+        // Silent auto-save for authenticated users
+        if (user) {
+          upsertAutoSave(newState, [], accumulated).catch(() => {});
+        }
         if (newMeta.pressure) {
           startPressureTimer(newMeta.pressure);
         }
