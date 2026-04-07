@@ -690,7 +690,7 @@ export default function EchoGame({ initialSave, onSave, onMenu, onStateChange }:
         setScene(accumulated); setStreamingText(""); setState(newState); setMeta(newMeta);
         setHints(newMeta.hints ?? []); setHasUnsavedChanges(true);
         onStateChange?.(newState, [], accumulated);
-        enterRevealMode(accumulated);
+        // No reveal mode — text was already read during streaming
       });
     } catch { setScene("Systemfel. ECHO svarar inte."); }
     finally { setIsThinking(false); setIsStreaming(false); setHudExpanded(true); startAmbient(); }
@@ -699,7 +699,6 @@ export default function EchoGame({ initialSave, onSave, onMenu, onStateChange }:
   async function sendInput(overrideText?: string) {
     const playerText = (overrideText ?? input).trim();
     if (!playerText || isStreaming || !state) return;
-    if (isRevealing) return; // Don't allow input while revealing
     setInput("");
 
     // Push current scene to history
@@ -738,7 +737,7 @@ export default function EchoGame({ initialSave, onSave, onMenu, onStateChange }:
         setScene(accumulated); setStreamingText(""); setState(newState); setMeta(newMeta);
         setHints(newMeta.hints ?? []); setHistory(newHistory); setHasUnsavedChanges(true);
         onStateChange?.(newState, newHistory, accumulated);
-        enterRevealMode(accumulated);
+        // No reveal mode — text was already read during streaming
       });
     } catch { setScene("Systemfel. ECHO svarar inte."); setAmbientFragments([]); setAmbientDimmed(false); }
     finally { setIsThinking(false); setIsStreaming(false); setHudExpanded(true); startAmbient(); }
@@ -853,26 +852,21 @@ export default function EchoGame({ initialSave, onSave, onMenu, onStateChange }:
           </div>
         )}
 
-        {isStreaming && !isThinking && streamingText && revealParagraphs.length === 0 && (
+        {/* Streaming: show text as it arrives */}
+        {isStreaming && !isThinking && streamingText && (
           <div style={{ background: "var(--color-background-primary)", border: "0.5px solid var(--color-border-tertiary)", borderRadius: "12px", padding: "2rem 2.25rem", marginBottom: "1.5rem" }}>
             <SceneText text={streamingText} streaming={true} compliance={meta.compliance} />
           </div>
         )}
 
-        {revealParagraphs.length > 0 && (
+        {/* Current scene: show after streaming is complete */}
+        {!isStreaming && scene && (
           <div style={{ background: "var(--color-background-primary)", border: "0.5px solid var(--color-border-tertiary)", borderRadius: "12px", padding: "2rem 2.25rem", marginBottom: "1.5rem" }}>
-            <RevealingScene
-              paragraphs={revealParagraphs}
-              revealedCount={revealedCount}
-              onAdvance={advanceReveal}
-              allRevealed={allRevealed}
-              sceneType={meta.sceneType}
-              compliance={meta.compliance}
-            />
+            <SceneText text={scene} streaming={false} compliance={meta.compliance} />
           </div>
         )}
 
-        {allRevealed && !isStreaming && hints.length > 0 && (
+        {!isStreaming && hints.length > 0 && (
           <ActionHints hints={hints} onSelect={(hint) => sendInput(hint)} />
         )}
 
@@ -896,15 +890,15 @@ export default function EchoGame({ initialSave, onSave, onMenu, onStateChange }:
           </div>
         )}
 
-        <div style={{ display: "flex", gap: "8px", opacity: isRevealing ? 0 : (isStreaming ? 0.5 : 1), transition: "opacity 0.4s", pointerEvents: isRevealing || isStreaming ? "none" : "auto" }}>
+        <div style={{ display: "flex", gap: "8px", opacity: isStreaming ? 0.5 : 1, transition: "opacity 0.4s", pointerEvents: isStreaming ? "none" : "auto" }}>
           <input value={input}
             onChange={(e) => { setInput(e.target.value); if (e.target.value) setAmbientPaused(true); else setAmbientPaused(false); }}
             onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendInput(); } }}
             placeholder={isStreaming ? "ECHO skriver..." : meta.sceneType === "puls" ? "..." : meta.sceneType === "andning" ? "Du tänker på..." : "Vad gör du?"}
-            disabled={isStreaming || isRevealing}
+            disabled={isStreaming}
             style={{ flex: 1, padding: "12px 16px", fontSize: "14px", border: "0.5px solid var(--color-border-secondary)", borderRadius: "8px", background: "var(--color-background-primary)", color: "var(--color-text-primary)", outline: "none" }} />
-          <button onClick={() => sendInput()} disabled={isStreaming || isRevealing || !input.trim()}
-            style={{ padding: "12px 20px", fontSize: "14px", border: "0.5px solid var(--color-border-secondary)", borderRadius: "8px", background: "transparent", color: "var(--color-text-primary)", cursor: isStreaming || isRevealing || !input.trim() ? "not-allowed" : "pointer", opacity: isStreaming || isRevealing || !input.trim() ? 0.4 : 1, transition: "opacity 0.3s" }}>
+          <button onClick={() => sendInput()} disabled={isStreaming || !input.trim()}
+            style={{ padding: "12px 20px", fontSize: "14px", border: "0.5px solid var(--color-border-secondary)", borderRadius: "8px", background: "transparent", color: "var(--color-text-primary)", cursor: isStreaming || !input.trim() ? "not-allowed" : "pointer", opacity: isStreaming || !input.trim() ? 0.4 : 1, transition: "opacity 0.3s" }}>
             →
           </button>
         </div>
