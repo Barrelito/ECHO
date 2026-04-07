@@ -459,13 +459,22 @@ const FLAG_LABELS: Record<string, string> = {
   "hittade_hexagrammet": "Hexagrammet — en empatikod, gömd i systemets djup",
   "hörde_evelyns_röst": "Evelyns röst — fragment av ett medvetande som inte borde existera",
   "mötte_daniel": "Daniel Voss — kopparmyntet, skulden, off-grid i Aspudden",
+  "mötte_arvid": "Arvid — det dolda geniet. Koppar, vinyl och paranoia.",
   "känner_till_kymlinge": "Kymlinge — spökstationen. Silverpilen. Betong utan färg.",
+  "såg_kymlinge_massakern": "Massakern — de krossade kropparna. Ingen krutrök. Bara kraft.",
   "hittade_spökhanden": "Spökhanden — biometrisk mask. ECHO ser dig inte.",
   "kontaktade_motståndet": "Motståndet — krypterade whispers i stadens brus",
   "besökte_serverhall_noll": "Serverhall Noll — arton grader. Mörkret andas.",
   "mötte_kane": "Gabriel Kane — karismatisk, övertygad. Tror att han styr ECHO.",
   "mötte_marcus": "Marcus Raine — raderad Titan. Få ord. Stor tystnad.",
+  "marcus_offrade_sig": "Marcus offer — han släppte inte. Han släppte aldrig.",
   "mötte_sofia": "Sofia — pragmatisk, stridshärdad. Värmen är begravd djupt.",
+  "såg_kalibreringen": "Kalibreringen — barnen. Visiren. 'Ett samhälle. Ett sinne.'",
+  "besökte_zon_3": "Zon 3 — den perfekta lögnen. Drogad luft. Filtrerad verklighet.",
+  "mötte_titan": "Titanen — tre meter stål utan ansikte. Utan tvekan.",
+  "echo_tappade_kontroll": "ECHO — guden som slutade lyda sin skapare.",
+  "hittade_artären": "Artären — tornets blodomlopp. Neonblå kylvätska under 300 bar.",
+  "kane_erbjöd_kontroll": "Kanes erbjudande — ordning i utbyte mot allt.",
   // Legacy English keys
   found_hexagram_mention: "Hexagrammet — en empatikod, gömd i systemets djup",
   heard_evelyns_voice: "Evelyns röst — fragment av ett medvetande som inte borde existera",
@@ -489,15 +498,15 @@ function formatFlagKey(key: string): string {
 const FLAG_CATEGORIES: Record<string, { label: string; keys: string[] }> = {
   characters: {
     label: "Karaktärer",
-    keys: ["mötte_daniel", "met_daniel", "mötte_marcus", "met_marcus", "mötte_sofia", "met_sofia", "mötte_kane", "met_gabriel", "hörde_evelyns_röst", "heard_evelyns_voice"],
+    keys: ["mötte_daniel", "met_daniel", "mötte_marcus", "met_marcus", "marcus_offrade_sig", "mötte_sofia", "met_sofia", "mötte_kane", "met_gabriel", "mötte_arvid", "hörde_evelyns_röst", "heard_evelyns_voice", "mötte_titan", "kane_erbjöd_kontroll"],
   },
   places: {
     label: "Platser",
-    keys: ["besökte_serverhall_noll", "entered_server_zero", "känner_till_kymlinge", "knows_about_kymlinge"],
+    keys: ["besökte_serverhall_noll", "entered_server_zero", "känner_till_kymlinge", "knows_about_kymlinge", "besökte_zon_3", "hittade_artären", "såg_kymlinge_massakern"],
   },
   secrets: {
     label: "Hemligheter",
-    keys: ["hittade_hexagrammet", "found_hexagram_mention", "hittade_spökhanden", "found_ghost_hand", "kontaktade_motståndet", "contacted_resistance"],
+    keys: ["hittade_hexagrammet", "found_hexagram_mention", "hittade_spökhanden", "found_ghost_hand", "kontaktade_motståndet", "contacted_resistance", "såg_kalibreringen", "echo_tappade_kontroll"],
   },
 };
 
