@@ -171,7 +171,7 @@ function StyledParagraph({ text, compliance, style }: { text: string; compliance
   );
 }
 
-function SceneText({ text, streaming, dimmed, compliance = 892 }: { text: string; streaming: boolean; dimmed?: boolean; compliance?: number }) {
+function SceneText({ text, streaming, dimmed, compliance = 892, skipAnimation }: { text: string; streaming: boolean; dimmed?: boolean; compliance?: number; skipAnimation?: boolean }) {
   const cleaned = cleanSceneText(text);
   const paragraphs = cleaned.split("\n").filter((l) => l.trim());
   // For dimmed (past) scenes with many paragraphs, show first and last with ellipsis
@@ -186,8 +186,8 @@ function SceneText({ text, streaming, dimmed, compliance = 892 }: { text: string
           <p key={i} style={{ margin: "0 0 1.1em 0", textAlign: "center", color: "var(--color-text-tertiary)" }}>…</p>
         ) : (
           <div key={i} style={{
-            animation: streaming || dimmed ? "none" : `sceneFadeIn 0.6s ease-out ${i * 0.15}s both`,
-            opacity: streaming || dimmed ? 1 : undefined,
+            animation: streaming || dimmed || skipAnimation ? "none" : `sceneFadeIn 0.6s ease-out ${i * 0.15}s both`,
+            opacity: streaming || dimmed || skipAnimation ? 1 : undefined,
           }}>
             <StyledParagraph text={p} compliance={compliance} />
           </div>
@@ -495,6 +495,7 @@ export interface EchoGameProps {
 export default function EchoGame({ initialSave, onSave, onMenu, onStateChange }: EchoGameProps) {
   const [scene, setScene] = useState(initialSave?.scene ?? "");
   const [streamingText, setStreamingText] = useState("");
+  const [justStreamed, setJustStreamed] = useState(false);
   const [history, setHistory] = useState<GameMessage[]>(initialSave?.history ?? []);
   const [state, setState] = useState<GameState | null>(initialSave?.state ?? null);
   const [meta, setMeta] = useState<Meta>({
@@ -681,16 +682,15 @@ export default function EchoGame({ initialSave, onSave, onMenu, onStateChange }:
 
   async function startGame() {
     setIsThinking(true); setIsStreaming(true); setStreamingText(""); setStarted(true);
-    setHudExpanded(false); setHints([]); setRevealParagraphs([]); setRevealedCount(0);
+    setJustStreamed(false); setHudExpanded(false); setHints([]); setRevealParagraphs([]); setRevealedCount(0);
     stopAmbient();
     let accumulated = "";
     try {
       const res = await fetch("/api/game");
       await readStream(res, (text) => { accumulated += text; setStreamingText(accumulated); }, (newState, newMeta) => {
-        setScene(accumulated); setStreamingText(""); setState(newState); setMeta(newMeta);
+        setJustStreamed(true); setScene(accumulated); setStreamingText(""); setState(newState); setMeta(newMeta);
         setHints(newMeta.hints ?? []); setHasUnsavedChanges(true);
         onStateChange?.(newState, [], accumulated);
-        // No reveal mode — text was already read during streaming
       });
     } catch { setScene("Systemfel. ECHO svarar inte."); }
     finally { setIsThinking(false); setIsStreaming(false); setHudExpanded(true); startAmbient(); }
@@ -713,7 +713,7 @@ export default function EchoGame({ initialSave, onSave, onMenu, onStateChange }:
 
     const recentTexts = ambientFragments.slice(-3).map((f) => f.text);
 
-    setIsThinking(true); setIsStreaming(true);
+    setIsThinking(true); setIsStreaming(true); setJustStreamed(false);
     const newHistory: GameMessage[] = [...history, { role: "assistant", content: scene }, { role: "user", content: playerText }];
     let accumulated = "";
     setStreamingText("");
@@ -734,10 +734,9 @@ export default function EchoGame({ initialSave, onSave, onMenu, onStateChange }:
         accumulated += text;
         setStreamingText(accumulated);
       }, (newState, newMeta) => {
-        setScene(accumulated); setStreamingText(""); setState(newState); setMeta(newMeta);
+        setJustStreamed(true); setScene(accumulated); setStreamingText(""); setState(newState); setMeta(newMeta);
         setHints(newMeta.hints ?? []); setHistory(newHistory); setHasUnsavedChanges(true);
         onStateChange?.(newState, newHistory, accumulated);
-        // No reveal mode — text was already read during streaming
       });
     } catch { setScene("Systemfel. ECHO svarar inte."); setAmbientFragments([]); setAmbientDimmed(false); }
     finally { setIsThinking(false); setIsStreaming(false); setHudExpanded(true); startAmbient(); }
@@ -757,7 +756,8 @@ export default function EchoGame({ initialSave, onSave, onMenu, onStateChange }:
     );
   }
 
-  const visibleFragments = ambientFragments.slice(-3);
+  // Only show the latest ambient fragment — they replace each other like a living ticker
+  const latestFragment = ambientFragments.length > 0 ? ambientFragments[ambientFragments.length - 1] : null;
 
   return (
     <div style={{ minHeight: "100vh", display: "flex", justifyContent: "center", padding: "1.5rem 1rem 3rem" }}>
@@ -862,7 +862,7 @@ export default function EchoGame({ initialSave, onSave, onMenu, onStateChange }:
         {/* Current scene: show after streaming is complete */}
         {!isStreaming && scene && (
           <div style={{ background: "var(--color-background-primary)", border: "0.5px solid var(--color-border-tertiary)", borderRadius: "12px", padding: "2rem 2.25rem", marginBottom: "1.5rem" }}>
-            <SceneText text={scene} streaming={false} compliance={meta.compliance} />
+            <SceneText text={scene} streaming={false} compliance={meta.compliance} skipAnimation={justStreamed} />
           </div>
         )}
 
@@ -870,23 +870,22 @@ export default function EchoGame({ initialSave, onSave, onMenu, onStateChange }:
           <ActionHints hints={hints} onSelect={(hint) => sendInput(hint)} />
         )}
 
-        {visibleFragments.length > 0 && (
-          <div style={{ marginBottom: "1rem", opacity: ambientDimmed ? 0.3 : 0.7, transition: "opacity 0.5s" }}>
-            {visibleFragments.map((frag) => (
-              <div key={frag.id} style={{
-                fontSize: "13px",
-                fontFamily: "Georgia, serif",
-                color: "var(--color-text-tertiary)",
-                lineHeight: "1.7",
-                padding: "0.4rem 0",
-                animation: "ambientFadeIn 1s ease-in",
-                borderLeft: frag.actionable ? "2px solid var(--color-text-tertiary)" : "none",
-                paddingLeft: frag.actionable ? "0.75rem" : "0",
-              }}>
-                {frag.text}
-              </div>
-            ))}
-            <style>{`@keyframes ambientFadeIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }`}</style>
+        {latestFragment && (
+          <div key={latestFragment.id} style={{
+            marginBottom: "1rem",
+            opacity: ambientDimmed ? 0.3 : 0.7,
+            transition: "opacity 0.5s",
+            fontSize: "13px",
+            fontFamily: "Georgia, serif",
+            color: "var(--color-text-tertiary)",
+            lineHeight: "1.7",
+            padding: "0.4rem 0",
+            animation: "ambientReplace 1.2s ease-in-out",
+            borderLeft: latestFragment.actionable ? "2px solid var(--color-text-tertiary)" : "none",
+            paddingLeft: latestFragment.actionable ? "0.75rem" : "0",
+          }}>
+            {latestFragment.text}
+            <style>{`@keyframes ambientReplace { 0% { opacity: 0; } 15% { opacity: 0; } 100% { opacity: 1; } }`}</style>
           </div>
         )}
 
