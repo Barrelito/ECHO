@@ -164,11 +164,13 @@ export async function POST(req: NextRequest) {
                 location: updatedState.location,
                 time: updatedState.time,
                 compliance: updatedState.compliance,
+                complianceDelta: stateBlock?.complianceDelta ?? 0,
                 inNeuralDive: updatedState.inNeuralDive,
                 echoAwareness: updatedState.echoAwareness,
                 hints: stateBlock?.hints ?? [],
                 sceneType: stateBlock?.sceneType ?? "scen",
                 ambientHook: stateBlock?.ambientHook,
+                newFlags: stateBlock?.flags ? Object.keys(stateBlock.flags).filter(k => stateBlock.flags![k] && !state.flags[k]) : [],
               },
             })}\n\n`
           )

@@ -29,11 +29,13 @@ export interface Meta {
   location: string;
   time: string;
   compliance: number;
+  complianceDelta?: number;
   inNeuralDive: boolean;
   echoAwareness: string;
   hints?: string[];
   sceneType?: SceneType;
   ambientHook?: string;
+  newFlags?: string[];
 }
 
 export interface SaveData {

@@ -28,17 +28,89 @@ function useEchoLoadingMessage(active: boolean) {
   return ECHO_LOADING_MESSAGES[index];
 }
 
-function ComplianceBar({ value }: { value: number }) {
+// === COMPLIANCE DELTA FEEDBACK ===
+function ComplianceDelta({ delta }: { delta: number }) {
+  if (delta === 0) return null;
+  const isPositive = delta > 0;
+  const color = isPositive ? "#639922" : "#E24B4A";
+  const text = isPositive ? `+${delta}` : `${delta}`;
+  return (
+    <span style={{
+      display: "inline-block",
+      fontSize: "13px",
+      fontFamily: "var(--font-mono, monospace)",
+      fontWeight: 600,
+      color,
+      animation: "deltaFadeUp 2.5s ease-out forwards",
+      marginLeft: "8px",
+    }}>
+      {text}
+      <style>{`
+        @keyframes deltaFadeUp {
+          0% { opacity: 0; transform: translateY(4px); }
+          15% { opacity: 1; transform: translateY(0); }
+          70% { opacity: 1; transform: translateY(0); }
+          100% { opacity: 0; transform: translateY(-8px); }
+        }
+      `}</style>
+    </span>
+  );
+}
+
+// Compliance milestones for narrative red thread
+const COMPLIANCE_MILESTONES = [
+  { value: 800, label: "GRÖN" },
+  { value: 400, label: "AMBER" },
+  { value: 100, label: "RÖD" },
+];
+
+function ComplianceBar({ value, delta }: { value: number; delta?: number }) {
   const color = value >= 800 ? "#639922" : value >= 400 ? "#BA7517" : "#E24B4A";
-  const label = value >= 800 ? "GRÖN" : value >= 400 ? "AMBER" : "RADERAD";
+  const label = value >= 800 ? "GRÖN" : value >= 400 ? "AMBER" : value >= 100 ? "RÖD" : "RADERAD";
+  const [flash, setFlash] = useState(false);
+
+  useEffect(() => {
+    if (delta && delta !== 0) {
+      setFlash(true);
+      const t = setTimeout(() => setFlash(false), 1200);
+      return () => clearTimeout(t);
+    }
+  }, [delta, value]);
+
   return (
     <div style={{ marginBottom: "1rem" }}>
-      <div style={{ display: "flex", justifyContent: "space-between", fontSize: "11px", color: "var(--color-text-tertiary)", marginBottom: "5px", letterSpacing: "0.07em", textTransform: "uppercase" }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: "11px", color: "var(--color-text-tertiary)", marginBottom: "5px", letterSpacing: "0.07em", textTransform: "uppercase" }}>
         <span>Compliance</span>
-        <span style={{ color, fontWeight: 500 }}>{value} · {label}</span>
+        <span style={{ display: "flex", alignItems: "center" }}>
+          <span style={{ color, fontWeight: 500 }}>{value} · {label}</span>
+          {delta !== undefined && delta !== 0 && <ComplianceDelta delta={delta} key={`${value}-${delta}`} />}
+        </span>
       </div>
-      <div style={{ height: "4px", background: "var(--color-background-tertiary)", borderRadius: "2px", overflow: "hidden" }}>
-        <div style={{ height: "100%", width: `${value / 10}%`, background: color, borderRadius: "2px", transition: "width 1.2s ease, background 1.2s ease" }} />
+      <div style={{ position: "relative", height: "4px", background: "var(--color-background-tertiary)", borderRadius: "2px", overflow: "hidden" }}>
+        <div style={{
+          height: "100%",
+          width: `${value / 10}%`,
+          background: color,
+          borderRadius: "2px",
+          transition: "width 1.2s ease, background 1.2s ease",
+          boxShadow: flash ? `0 0 8px ${color}` : "none",
+        }} />
+      </div>
+      {/* Milestone markers */}
+      <div style={{ position: "relative", height: "8px", marginTop: "2px" }}>
+        {COMPLIANCE_MILESTONES.map((m) => (
+          <div key={m.value} style={{
+            position: "absolute",
+            left: `${m.value / 10}%`,
+            transform: "translateX(-50%)",
+            fontSize: "7px",
+            color: value <= m.value ? "var(--color-text-tertiary)" : "var(--color-background-tertiary)",
+            letterSpacing: "0.05em",
+            opacity: 0.6,
+          }}>
+            {m.label}
+          </div>
+        ))}
       </div>
     </div>
   );
@@ -413,8 +485,48 @@ function formatFlagKey(key: string): string {
   return cleaned.charAt(0).toUpperCase() + cleaned.slice(1);
 }
 
+// === JOURNAL WITH THEMATIC GROUPING ===
+const FLAG_CATEGORIES: Record<string, { label: string; keys: string[] }> = {
+  characters: {
+    label: "Karaktärer",
+    keys: ["mötte_daniel", "met_daniel", "mötte_marcus", "met_marcus", "mötte_sofia", "met_sofia", "mötte_kane", "met_gabriel", "hörde_evelyns_röst", "heard_evelyns_voice"],
+  },
+  places: {
+    label: "Platser",
+    keys: ["besökte_serverhall_noll", "entered_server_zero", "känner_till_kymlinge", "knows_about_kymlinge"],
+  },
+  secrets: {
+    label: "Hemligheter",
+    keys: ["hittade_hexagrammet", "found_hexagram_mention", "hittade_spökhanden", "found_ghost_hand", "kontaktade_motståndet", "contacted_resistance"],
+  },
+};
+
+function categorizeFlag(key: string): string {
+  for (const [cat, { keys }] of Object.entries(FLAG_CATEGORIES)) {
+    if (keys.includes(key)) return cat;
+  }
+  return "other";
+}
+
 function Journal({ flags, open, onToggle }: { flags: Record<string, boolean>; open: boolean; onToggle: () => void }) {
   const discovered = Object.entries(flags).filter(([, v]) => v);
+
+  // Group by category
+  const grouped: Record<string, string[]> = {};
+  for (const [key] of discovered) {
+    const cat = categorizeFlag(key);
+    if (!grouped[cat]) grouped[cat] = [];
+    grouped[cat].push(key);
+  }
+
+  const categoryOrder = ["characters", "places", "secrets", "other"];
+  const categoryLabels: Record<string, string> = {
+    characters: "Karaktärer",
+    places: "Platser",
+    secrets: "Hemligheter",
+    other: "Övrigt",
+  };
+
   return (
     <div style={{ marginBottom: "1rem" }}>
       <div
@@ -424,24 +536,38 @@ function Journal({ flags, open, onToggle }: { flags: Record<string, boolean>; op
         <span>Upptäckter {discovered.length > 0 ? `(${discovered.length})` : ""}</span>
         <span style={{ transition: "transform 0.3s", transform: open ? "rotate(180deg)" : "rotate(0)" }}>&#9662;</span>
       </div>
-      <div style={{ overflow: "hidden", maxHeight: open ? "500px" : "0px", opacity: open ? 1 : 0, transition: "max-height 0.4s ease, opacity 0.3s ease" }}>
+      <div style={{ overflow: "hidden", maxHeight: open ? "600px" : "0px", opacity: open ? 1 : 0, transition: "max-height 0.4s ease, opacity 0.3s ease" }}>
         {discovered.length === 0 ? (
           <div style={{ fontSize: "13px", fontFamily: "Georgia, serif", color: "var(--color-text-tertiary)", fontStyle: "italic", padding: "0.5rem 0" }}>
             Inga upptäckter ännu. Utforska världen.
           </div>
         ) : (
           <div style={{ padding: "0.5rem 0" }}>
-            {discovered.map(([key]) => (
-              <div key={key} style={{
-                fontSize: "13px",
-                fontFamily: "Georgia, serif",
-                color: "var(--color-text-secondary)",
-                padding: "0.35rem 0 0.35rem 0.75rem",
-                borderLeft: "2px solid var(--color-border-tertiary)",
-                marginBottom: "0.4rem",
-                animation: "sceneFadeIn 0.4s ease-out both",
-              }}>
-                {FLAG_LABELS[key] || formatFlagKey(key)}
+            {categoryOrder.filter(cat => grouped[cat]?.length).map((cat) => (
+              <div key={cat} style={{ marginBottom: "0.75rem" }}>
+                <div style={{
+                  fontSize: "9px",
+                  color: "var(--color-text-tertiary)",
+                  letterSpacing: "0.1em",
+                  textTransform: "uppercase",
+                  marginBottom: "0.3rem",
+                  paddingLeft: "0.75rem",
+                }}>
+                  {categoryLabels[cat]}
+                </div>
+                {grouped[cat].map((key) => (
+                  <div key={key} style={{
+                    fontSize: "13px",
+                    fontFamily: "Georgia, serif",
+                    color: "var(--color-text-secondary)",
+                    padding: "0.35rem 0 0.35rem 0.75rem",
+                    borderLeft: `2px solid ${cat === "secrets" ? "#BA7517" : cat === "characters" ? "var(--color-text-tertiary)" : "var(--color-border-tertiary)"}`,
+                    marginBottom: "0.4rem",
+                    animation: "sceneFadeIn 0.4s ease-out both",
+                  }}>
+                    {FLAG_LABELS[key] || formatFlagKey(key)}
+                  </div>
+                ))}
               </div>
             ))}
           </div>
@@ -497,6 +623,81 @@ function MiniMap({ currentLocation, compliance }: { currentLocation: string; com
   );
 }
 
+// === JOURNAL DISCOVERY NOTIFICATION ===
+function DiscoveryToast({ flagKey, onDone }: { flagKey: string; onDone: () => void }) {
+  const label = FLAG_LABELS[flagKey] || formatFlagKey(flagKey);
+  useEffect(() => {
+    const t = setTimeout(onDone, 4000);
+    return () => clearTimeout(t);
+  }, [onDone]);
+
+  return (
+    <div style={{
+      position: "fixed",
+      bottom: "80px",
+      left: "50%",
+      transform: "translateX(-50%)",
+      zIndex: 100,
+      background: "var(--color-background-secondary)",
+      border: "0.5px solid var(--color-border-secondary)",
+      borderRadius: "10px",
+      padding: "0.6rem 1.2rem",
+      maxWidth: "400px",
+      animation: "toastIn 3.5s ease-out forwards",
+      boxShadow: "0 4px 20px rgba(0,0,0,0.1)",
+    }}>
+      <div style={{ fontSize: "9px", color: "var(--color-text-tertiary)", letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: "3px" }}>
+        Ny upptäckt
+      </div>
+      <div style={{ fontSize: "13px", fontFamily: "Georgia, serif", color: "var(--color-text-primary)", lineHeight: 1.4 }}>
+        {label}
+      </div>
+      <style>{`
+        @keyframes toastIn {
+          0% { opacity: 0; transform: translateX(-50%) translateY(12px); }
+          10% { opacity: 1; transform: translateX(-50%) translateY(0); }
+          80% { opacity: 1; transform: translateX(-50%) translateY(0); }
+          100% { opacity: 0; transform: translateX(-50%) translateY(-8px); }
+        }
+      `}</style>
+    </div>
+  );
+}
+
+// === ONBOARDING OVERLAY ===
+function OnboardingOverlay({ onDismiss }: { onDismiss: () => void }) {
+  return (
+    <div
+      onClick={onDismiss}
+      style={{
+        position: "fixed",
+        bottom: "100px",
+        left: "50%",
+        transform: "translateX(-50%)",
+        zIndex: 50,
+        background: "var(--color-background-secondary)",
+        border: "0.5px solid var(--color-border-tertiary)",
+        borderRadius: "10px",
+        padding: "1rem 1.5rem",
+        maxWidth: "320px",
+        animation: "sceneFadeIn 0.8s ease-out both",
+        cursor: "pointer",
+        textAlign: "center",
+      }}
+    >
+      <div style={{ fontSize: "13px", fontFamily: "Georgia, serif", color: "var(--color-text-secondary)", lineHeight: 1.6 }}>
+        Skriv fritt vad du vill göra.
+      </div>
+      <div style={{ fontSize: "12px", color: "var(--color-text-tertiary)", marginTop: "6px", lineHeight: 1.5 }}>
+        Tryck <span style={{ fontFamily: "var(--font-mono, monospace)", fontSize: "11px", background: "var(--color-background-tertiary)", padding: "1px 5px", borderRadius: "3px" }}>Space</span> för att avancera text
+      </div>
+      <div style={{ fontSize: "10px", color: "var(--color-text-tertiary)", marginTop: "8px", opacity: 0.6 }}>
+        Klicka för att stänga
+      </div>
+    </div>
+  );
+}
+
 interface AmbientFragment {
   text: string;
   actionable: boolean;
@@ -533,6 +734,14 @@ export default function EchoGame({ initialSave, onSave, onMenu, onStateChange }:
   const [hints, setHints] = useState<string[]>([]);
   const [journalOpen, setJournalOpen] = useState(false);
   const [mapOpen, setMapOpen] = useState(false);
+  const [complianceDelta, setComplianceDelta] = useState<number>(0);
+  const [discoveryQueue, setDiscoveryQueue] = useState<string[]>([]);
+  const [showOnboarding, setShowOnboarding] = useState(() => {
+    if (typeof window !== "undefined") {
+      return !localStorage.getItem("echo_onboarded");
+    }
+    return true;
+  });
   const [revealParagraphs, setRevealParagraphs] = useState<string[]>([]);
   const [revealedCount, setRevealedCount] = useState(0);
   const isRevealing = revealParagraphs.length > 0 && revealedCount < revealParagraphs.length;
@@ -708,6 +917,8 @@ export default function EchoGame({ initialSave, onSave, onMenu, onStateChange }:
       await readStream(res, (text) => { accumulated += text; setStreamingText(accumulated); }, (newState, newMeta) => {
         setJustStreamed(true); setScene(accumulated); setStreamingText(""); setState(newState); setMeta(newMeta);
         setHints(newMeta.hints ?? []); setHasUnsavedChanges(true);
+        setComplianceDelta(newMeta.complianceDelta ?? 0);
+        if (newMeta.newFlags?.length) setDiscoveryQueue(prev => [...prev, ...newMeta.newFlags!]);
         onStateChange?.(newState, [], accumulated);
       });
     } catch { setScene("Systemfel. ECHO svarar inte."); }
@@ -718,6 +929,7 @@ export default function EchoGame({ initialSave, onSave, onMenu, onStateChange }:
     const playerText = (overrideText ?? input).trim();
     if (!playerText || isStreaming || !state) return;
     setInput("");
+    if (showOnboarding) { setShowOnboarding(false); if (typeof window !== "undefined") localStorage.setItem("echo_onboarded", "1"); }
 
     // Push current scene to history
     if (scene) {
@@ -754,6 +966,8 @@ export default function EchoGame({ initialSave, onSave, onMenu, onStateChange }:
       }, (newState, newMeta) => {
         setJustStreamed(true); setScene(accumulated); setStreamingText(""); setState(newState); setMeta(newMeta);
         setHints(newMeta.hints ?? []); setHistory(newHistory); setHasUnsavedChanges(true);
+        setComplianceDelta(newMeta.complianceDelta ?? 0);
+        if (newMeta.newFlags?.length) setDiscoveryQueue(prev => [...prev, ...newMeta.newFlags!]);
         onStateChange?.(newState, newHistory, accumulated);
       });
     } catch { setScene("Systemfel. ECHO svarar inte."); setAmbientFragments([]); setAmbientDimmed(false); }
@@ -834,6 +1048,7 @@ export default function EchoGame({ initialSave, onSave, onMenu, onStateChange }:
             <span>{meta.location} · {meta.time}{meta.inNeuralDive ? " · ⬡ Neural" : ""}</span>
             <span style={{ display: "flex", alignItems: "center", gap: "6px" }}>
               <span style={{ color: complianceColor(meta.compliance), fontWeight: 500 }}>{meta.compliance}</span>
+              {complianceDelta !== 0 && <ComplianceDelta delta={complianceDelta} key={`compact-${meta.compliance}-${complianceDelta}`} />}
               <span style={{ fontSize: "8px", transition: "transform 0.3s", transform: hudExpanded ? "rotate(180deg)" : "rotate(0)" }}>▾</span>
             </span>
           </div>
@@ -846,7 +1061,7 @@ export default function EchoGame({ initialSave, onSave, onMenu, onStateChange }:
             transition: "max-height 0.4s ease, opacity 0.3s ease",
             marginTop: hudExpanded ? "0.5rem" : "0",
           }}>
-            <ComplianceBar value={meta.compliance} />
+            <ComplianceBar value={meta.compliance} delta={complianceDelta} />
             <StatusRow meta={meta} />
             {meta.inNeuralDive && (
               <div style={{ background: "#EEEDFE", border: "0.5px solid #AFA9EC", borderRadius: "8px", padding: "0.6rem 1rem", fontSize: "12px", color: "#3C3489", marginBottom: "0.5rem", letterSpacing: "0.04em" }}>
@@ -937,6 +1152,23 @@ export default function EchoGame({ initialSave, onSave, onMenu, onStateChange }:
           </button>
         </div>
         <div ref={bottomRef} />
+
+        {/* Discovery toast — show one at a time from queue */}
+        {discoveryQueue.length > 0 && (
+          <DiscoveryToast
+            key={discoveryQueue[0]}
+            flagKey={discoveryQueue[0]}
+            onDone={() => setDiscoveryQueue(prev => prev.slice(1))}
+          />
+        )}
+
+        {/* Onboarding overlay — first visit only */}
+        {showOnboarding && !isStreaming && !isThinking && scene && (
+          <OnboardingOverlay onDismiss={() => {
+            setShowOnboarding(false);
+            if (typeof window !== "undefined") localStorage.setItem("echo_onboarded", "1");
+          }} />
+        )}
       </div>
     </div>
   );
